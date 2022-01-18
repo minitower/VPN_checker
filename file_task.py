@@ -1,9 +1,8 @@
-import os
-import pandas as pd
 import json
+import os
+
+import pandas as pd
 from dotenv import load_dotenv
-import requests
-import numpy as np
 
 
 class FileWork:

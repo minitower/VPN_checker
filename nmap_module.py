@@ -116,17 +116,20 @@ class nmapModule:
         """
         Func for pinging ports of init IP address
         :param target: IP of target to analyse
-        :param ports: interval of ports to analyse
+        :param ports: interval of ports to analyse or all
         :param methods: methods (one or list from [result_intense, result_intense udp,
         result_intense tcp, result_intense no ping, ping, quick,
         traceroot, regular, slow])
         :return: results
         """
         if methods is None:
-            methods = ['regular']
+            methods = ['result_regular']
 
         if ports == None:
             ports = self.default_ports
+
+        if ports == 'all':
+            ports = '1-47823'
 
         if type(ports) == int or type(ports) == str:
             ports = list(ports)
@@ -141,49 +144,57 @@ class nmapModule:
                 result = self.command_exec(f'nmap -p {port} -T4 -A {ipv6} -v {target}')
                 with open(self.fw.results + f'\\result_intense\\{target}.txt', 'w') as f:
                     f.write(result)
+                return result
 
-        if 'result_intense udp' in methods:
+        if 'result_intense_udp' in methods:
             for port in ports:
                 result = self.command_exec(f'nmap -p {port} -sS -sU -T4 {ipv6} -A -v {target}')
                 with open(self.fw.results + f'\\result_intense_upd\\{target}.txt', 'w') as f:
                     f.write(result)
+                return result
 
-        if 'result_intense no ping' in methods:
+        if 'result_intense_no_ping' in methods:
             for port in ports:
                 result = self.command_exec(f'nmap -T4 -A -v -p {port} {ipv6} -Pn {target}')
                 with open(self.fw.results + f'\\result_intense_no_ping\\{target}.txt', 'w') as f:
                     f.write(result)
+                return result
 
-        if 'ping' in methods:
+        if 'result_ping' in methods:
             for port in ports:
                 result = self.command_exec(f'nmap -sn -p {port} {ipv6} {target}')
                 with open(self.fw.results + f'\\result_ping\\{target}.txt', 'w') as f:
                     f.write(result)
+                return result
 
-        if 'quick' in methods:
+        if 'result_quick' in methods:
             for port in ports:
                 result = self.command_exec(f'nmap -T4 -F -p {port} {ipv6} {target}')
                 with open(self.fw.results + f'\\result_quick\\{target}.txt', 'w') as f:
                     f.write(result)
+                return result
 
-        if 'traceroot' in methods:
+        if 'result_traceroot' in methods:
             for port in ports:
                 result = self.command_exec(f'nmap -sn --traceroute -p {port} {ipv6} {target}')
                 with open(self.fw.results + f'\\result_traceroot\\{target}.txt', 'w') as f:
                     f.write(result)
+                return result
 
-        if 'regular' in methods:
+        if 'result_regular' in methods:
             for port in ports:
                 result = self.command_exec(f'nmap -p {port} {ipv6} {target}')
                 with open(self.fw.results + f'\\result_regular\\{target}.txt', 'w') as f:
                     f.write(result)
+                return result
 
-        if 'slow' in methods:
+        if 'result_large' in methods:
             for port in ports:
                 result = self.command_exec(f'nmap -sS -sU -T4 -A -v {ipv6} -p {port} -PE -PP -PS80,443 -PA3389 '
                                            f'-PU40125 -PY -g 53 --script "default or (discovery and safe)" {target}')
                 with open(self.fw.results + f'\\result_large\\{target}.txt', 'w') as f:
                     f.write(result)
+                return result
 
     def db_search_IP(self, target, table_list=['all']):
         """
@@ -224,8 +235,10 @@ class nmapModule:
         :return: predict
         """
         hostname = socket.gethostbyaddr(target)
-        if ['amasonaws', 'elatomono', 'vps', 'vpn', 'ppp',
-            'server', 'secureserver', 'telcom', 'google', 'host'] in hostname:
+        if ['cmcti', 'linode', 'static', 'your-server', 'clients',
+            'dynamic', 'sl-reverse', 'quantum', 'broadband', 'vnpt',
+            'nidix', 'netbynet', 'totalplay', 'vps', 'ertelecom', 'altair',
+            'megared', 'hanastar', 'oxentenet', 'rfconnect'] in hostname:
             print(f'Strange name... {target} ==> {hostname}')
             return (target, hostname)
 
@@ -269,5 +282,6 @@ class nmapModule:
             with open(self.fw.results + f'\\result_strong_search\\{target} p {port}.txt', 'a+') as f:
                 f.write(result)
         self.strong_check_complete = True
+        return result
 
 
