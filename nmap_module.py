@@ -23,6 +23,10 @@ class nmapModule:
         :param ip: str of list of str - if None - just init
         :param connected_ip: if True - try to find same open ports or sockets
         """
+        self.ports_checker = []
+        self.port_closed = None
+        self.strong_host_down = None
+        self.host_down = None
         self.ip = ip
         self.fw = FileWork()
         self.connected_ip = connected_ip
@@ -44,7 +48,7 @@ class nmapModule:
         self.default_ports = list(self.default_ports.loc[self.default_ports['common'] == 'FALSE']['port'].values)
         self.scoring_dict = {'open_port': 1,
                              'open_vpn_port': 3,
-                             'mistery_port': 0,
+                             'filtered_port': 2,
                              'closed': -3,
                              'host_down': -5,
                              'host_up': 3}
@@ -104,7 +108,8 @@ class nmapModule:
             except WindowsError:
                 traceback.print_exc()
 
-    def command_exec(self, command):
+    @staticmethod
+    def command_exec(command):
         """
         Func for communicate with nmap application via cmd
         :param command:
@@ -125,7 +130,7 @@ class nmapModule:
         if methods is None:
             methods = ['result_regular']
 
-        if ports == None:
+        if ports is None:
             ports = self.default_ports
 
         if ports == 'all':
@@ -141,62 +146,62 @@ class nmapModule:
 
         if 'result_intense' in methods:
             for port in ports:
-                result = self.command_exec(f'nmap -p {port} -T4 -A {ipv6} -v {target}')
+                self.output = self.command_exec(f'nmap -p {port} -T4 -A {ipv6} -v {target}')
                 with open(self.fw.results + f'\\result_intense\\{target}.txt', 'w') as f:
-                    f.write(result)
-                return result
+                    f.write(self.output)
+                return self.output
 
         if 'result_intense_udp' in methods:
             for port in ports:
-                result = self.command_exec(f'nmap -p {port} -sS -sU -T4 {ipv6} -A -v {target}')
+                self.output = self.command_exec(f'nmap -p {port} -sS -sU -T4 {ipv6} -A -v {target}')
                 with open(self.fw.results + f'\\result_intense_upd\\{target}.txt', 'w') as f:
-                    f.write(result)
-                return result
+                    f.write(self.output)
+                return self.output
 
         if 'result_intense_no_ping' in methods:
             for port in ports:
-                result = self.command_exec(f'nmap -T4 -A -v -p {port} {ipv6} -Pn {target}')
+                self.output = self.command_exec(f'nmap -T4 -A -v -p {port} {ipv6} -Pn {target}')
                 with open(self.fw.results + f'\\result_intense_no_ping\\{target}.txt', 'w') as f:
-                    f.write(result)
-                return result
+                    f.write(self.output)
+                return self.output
 
         if 'result_ping' in methods:
             for port in ports:
-                result = self.command_exec(f'nmap -sn -p {port} {ipv6} {target}')
+                self.output = self.command_exec(f'nmap -sn -p {port} {ipv6} {target}')
                 with open(self.fw.results + f'\\result_ping\\{target}.txt', 'w') as f:
-                    f.write(result)
-                return result
+                    f.write(self.output)
+                return self.output
 
         if 'result_quick' in methods:
             for port in ports:
-                result = self.command_exec(f'nmap -T4 -F -p {port} {ipv6} {target}')
+                self.output = self.command_exec(f'nmap -T4 -F -p {port} {ipv6} {target}')
                 with open(self.fw.results + f'\\result_quick\\{target}.txt', 'w') as f:
-                    f.write(result)
-                return result
+                    f.write(self.output)
+                return self.output
 
         if 'result_traceroot' in methods:
             for port in ports:
-                result = self.command_exec(f'nmap -sn --traceroute -p {port} {ipv6} {target}')
+                self.output = self.command_exec(f'nmap -sn --traceroute -p {port} {ipv6} {target}')
                 with open(self.fw.results + f'\\result_traceroot\\{target}.txt', 'w') as f:
-                    f.write(result)
-                return result
+                    f.write(self.output)
+                return self.output
 
         if 'result_regular' in methods:
             for port in ports:
-                result = self.command_exec(f'nmap -p {port} {ipv6} {target}')
+                self.output = self.command_exec(f'nmap -p {port} {ipv6} {target}')
                 with open(self.fw.results + f'\\result_regular\\{target}.txt', 'w') as f:
-                    f.write(result)
-                return result
+                    f.write(self.output)
+                return self.output
 
         if 'result_large' in methods:
             for port in ports:
-                result = self.command_exec(f'nmap -sS -sU -T4 -A -v {ipv6} -p {port} -PE -PP -PS80,443 -PA3389 '
+                self.output = self.command_exec(f'nmap -sS -sU -T4 -A -v {ipv6} -p {port} -PE -PP -PS80,443 -PA3389 '
                                            f'-PU40125 -PY -g 53 --script "default or (discovery and safe)" {target}')
                 with open(self.fw.results + f'\\result_large\\{target}.txt', 'w') as f:
-                    f.write(result)
-                return result
+                    f.write(self.output)
+                return self.output
 
-    def db_search_IP(self, target, table_list=['all']):
+    def db_search_IP(self, target, table_list=None):
         """
         Func for most clear and simple methods - try to find
         target IP in free VPN database
@@ -204,6 +209,8 @@ class nmapModule:
         :param table_list: list, if all - search from all tables
         :return: bool, if True - VPN
         """
+        if table_list is None:
+            table_list = ['all']
         if table_list == ['all']:
             table_list = self.table_list
         for i in table_list:
@@ -240,25 +247,7 @@ class nmapModule:
             'nidix', 'netbynet', 'totalplay', 'vps', 'ertelecom', 'altair',
             'megared', 'hanastar', 'oxentenet', 'rfconnect'] in hostname:
             print(f'Strange name... {target} ==> {hostname}')
-            return (target, hostname)
-
-    def scorring(self):
-        """
-        Func for summarise all parameters of automatate script
-        :return: self.score
-        """
-        if self.host_down:
-            self.score += self.scoring_dict['host_down']
-        else:
-            self.score += self.scoring_dict['host_up']
-        if self.strong_host_down:
-            self.score += self.scoring_dict['host_down']
-        else:
-            self.score += self.scoring_dict['host_up']
-        if self.port_closed:
-            self.score += self.scoring_dict['closed']
-        self.score = sum(self.ports_checker)
-        return self.score
+            return target, hostname
 
     def strong_check(self, target=None, ports=None):
         """
@@ -267,7 +256,7 @@ class nmapModule:
         :param ports: searchable ports
         :return: file with result
         """
-        if ports == None:
+        if ports is None:
             ports = self.default_ports
 
         if type(ports) == int or type(ports) == str:
@@ -277,11 +266,10 @@ class nmapModule:
             ipv6 = '-6'
         else:
             ipv6 = ''
+
         for port in ports:
             result = self.command_exec(f'nmap -p {port} -Pn {ipv6} -v {target}')
             with open(self.fw.results + f'\\result_strong_search\\{target} p {port}.txt', 'a+') as f:
                 f.write(result)
         self.strong_check_complete = True
         return result
-
-
