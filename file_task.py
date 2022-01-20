@@ -19,14 +19,12 @@ class FileWork:
         self.direction_path = os.path.dirname(__file__)
         self.path_with_data = self.direction_path + '{}Data_storage'.format(self.cs)
         self.tmp_storage = self.direction_path + '{}Tmp_storage'.format(self.cs)
-        self.results = self.direction_path + '{}results'.format(self.cs)
         self.final_results = self.direction_path + '{}FINAL_RESULTS'.format(self.cs)
 
         load_dotenv()
 
         os.environ['DIR_PATH'] = self.direction_path
         os.environ['TMP_STORAGE'] = self.tmp_storage
-        os.environ['results'] = self.results
         os.environ['final'] = self.final_results
 
         # Check path to required files
@@ -52,15 +50,16 @@ class FileWork:
         #    os.mkdir(self.direction_path + r'{}Output{}prior_distribution'.format(self.cs, self.cs))
 
     @staticmethod
-    def write_in_file(path, message, type='a+', q=True):
+    def write_in_file(path, message, wtype='a+', q=True):
         """
         Func for write some message to file
+        :param wtype: type of python default file.write method
         :param q: bool, print err code ot not
         :param path: absolute path to necessary file (str type)
         :param message: data with message in string format (str type)
         :return: None (None type)
         """
-        with open(path, type, encoding='UTF-8') as f:
+        with open(path, wtype, encoding='UTF-8') as f:
             f.write(message)
             f.close()
             if not q:
@@ -79,6 +78,8 @@ class FileWork:
         if os.path.split(path)[1].split('.')[1] == 'json':
             with open(path, 'r', encoding='UTF-8') as file:
                 data = json.load(file)
+        if os.path.split(path)[1].split('.')[1] == 'xlsx':
+            data = pd.read_excel(path)
         else:
             with open(path) as f:
                 data = f.read()

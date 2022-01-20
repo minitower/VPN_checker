@@ -1,3 +1,5 @@
+import socket
+
 from nmap_module import nmapModule
 from file_task import FileWork
 import os
@@ -5,15 +7,27 @@ import os
 
 class nmapWizard(nmapModule):
 
-    def __init__(self, target=None, auto=False):
+    def __init__(self, target=None, auto=False, **kwargs):
         """
         Addictive module for nmap module to get pretty result
         and push user to right side of module
         :param auto: if auto mode - just output result of checking
+        :param kwargs: dict like {str: bool}.
+        Default {'traceroute': True, 'geoip':True, 'owner': True}
         target ip address
         """
         super().__init__()
         self.result_strong = None
+        self.kwargs_default = {'traceroute': True,
+                                'geoip':True,
+                                'owner': True}
+        if self.kwargs_default.keys() == kwargs.keys():
+            self.script_dict = kwargs
+        else:
+            self.script_dict = {}
+            for i in set(self.kwargs_default.keys()) - set(kwargs.keys()):
+                self.script_dict.update({i: self.kwargs_default[i]})
+            self.script_dict.update(kwargs)
         self.program = None
         self.state = None
         self.port = None
@@ -27,7 +41,21 @@ class nmapWizard(nmapModule):
                 print('Found free vpn service!')
                 self.vpn_check = True
                 self.fw.write_in_file(self.fw.final_results + f'{self.fw.cs}{self.target}.txt',
-                                      message=f'Target: {target} was found in free VPN DB')
+                                      message=f'\nTarget: {target} was found in free VPN DB')
+
+            self.fw.write_in_file(self.tmp_result,
+                                  message=f'\nSOME INFO ABOUT HOST:')
+            self.fw.write_in_file(self.tmp_result,
+                                  message=f'\nipv4: {self.target}')
+            self.fw.write_in_file(self.tmp_result,
+                                  message=f'\nhostname in local dns: {socket.gethostbyaddr(self.target)}')
+            if self.script_dict['owner']:
+                self.whois_ip_nmap()
+            if self.script_dict['geoip']:
+                self.retrieving_geo()
+            if self.script_dict['traceroute']:
+                self.traceroute_with_geo()
+            print(self.fw.read_from_file(self.tmp_result))
             print(self.windows_default_scan(self.target, methods=self.methods))
             self.after_regular_check()
             self.pars_result(self.target)
@@ -76,7 +104,8 @@ class nmapWizard(nmapModule):
             n += 1
 
     def result(self):
-        if sum(self.ports_checker) >= 6 and not self.vpn_check:
+
+        if not self.vpn_check and sum(self.ports_checker) >= 6:
             self.vpn_check = True
         print('ANALYSE RESULT: ')
         if self.vpn_check:

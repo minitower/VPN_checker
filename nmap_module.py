@@ -1,40 +1,59 @@
 import os
+import shutil
+import socket
 import sqlite3
-from typing import List
-
-from file_task import FileWork
 import subprocess as sp
 import traceback
 import warnings
-import requests
-import shutil
+
 import pandas as pd
-import socket
+import requests
+
+from file_task import FileWork
 
 
 class nmapModule:
 
-    def __init__(self, ip=None, connected_ip=None, nmap_install=False):
+    def __init__(self, target=None, nmap_install=False):
         """
         Func for initialisation checking ip address for
         1) VPN by 2 method: ping VPN port or connect to VPN ports
         2) location of IP (by domain)
         3) check for time of up host in Ethernet
-        :param ip: str of list of str - if None - just init
-        :param connected_ip: if True - try to find same open ports or sockets
+        :param target: str of list of str - if None - raise ValueError
+        :param nmap_install: if True - check the installation of nmap in machine
+        and install if needed; else pass the installation check and installation
         """
+        self.all_country_trace = None
+        self.trace = None
+        self.owner = None
+        self.socks_port = None
+        self.geolocation = None
+        self.target = target
+        self.strong_output = None
+        self.output = None
         self.ports_checker = []
         self.port_closed = None
         self.strong_host_down = None
         self.host_down = None
-        self.ip = ip
         self.fw = FileWork()
-        self.connected_ip = connected_ip
         self.binary_path = self.fw.tmp_storage
         self.sql = sqlite3.connect(r'C:\Users\user\PycharmProjects\VPN_checker\Data_storage\vpn.db')
         self.cur = self.sql.cursor()
         self.vpn_found = False
         self.score = 0
+        self.tmp_result = self.fw.tmp_storage + f'\\{self.target}.txt'
+        with open(self.tmp_result, 'w') as f:
+            f.write('Library for VPN check in ip address')
+            f.write(r'''
+  _   _ __  __          _____   __      _______  _   _    _____ _    _ ______ _____ _  ________ _____  
+ | \ | |  \/  |   /\   |  __ \  \ \    / /  __ \| \ | |  / ____| |  | |  ____/ ____| |/ /  ____|  __ \ 
+ |  \| | \  / |  /  \  | |__) |  \ \  / /| |__) |  \| | | |    | |__| | |__ | |    | ' /| |__  | |__) |
+ | . ` | |\/| | / /\ \ |  ___/    \ \/ / |  ___/| . ` | | |    |  __  |  __|| |    |  < |  __| |  _  / 
+ | |\  | |  | |/ ____ \| |         \  /  | |    | |\  | | |____| |  | | |___| |____| . \| |____| | \ \ 
+ |_| \_|_|  |_/_/    \_\_|          \/   |_|    |_| \_|  \_____|_|  |_|______\_____|_|\_\______|_|  \_\
+                                                                                                       
+                                                                                                       ''')
         self.table_list = ['HTTP_proxies',
                            'L2TP_IPsec',
                            'SOCKS_5',
@@ -51,7 +70,11 @@ class nmapModule:
                              'filtered_port': 2,
                              'closed': -3,
                              'host_down': -5,
-                             'host_up': 3}
+                             'host_up': 3,
+                             'non-Russia geo': 3,
+                             'strange_hostname': 1,
+                             'strange_owner': 2,
+                             '3 or more country in traceroute': 3}
         if not nmap_install:
             if self.check() == 2:
                 if os.system('nmap') == 1:
@@ -60,6 +83,8 @@ class nmapModule:
                         self.nmap_install()
         else:
             self.nmap_install()
+        if self.target is None:
+            raise ValueError('Please reinit class with correct target!')
 
     def check(self):
         """
@@ -147,58 +172,50 @@ class nmapModule:
         if 'result_intense' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -p {port} -T4 -A {ipv6} -v {target}')
-                with open(self.fw.results + f'\\result_intense\\{target}.txt', 'w') as f:
-                    f.write(self.output)
+                self.fw.write_in_file(self.tmp_result, self.output)
                 return self.output
 
         if 'result_intense_udp' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -p {port} -sS -sU -T4 {ipv6} -A -v {target}')
-                with open(self.fw.results + f'\\result_intense_upd\\{target}.txt', 'w') as f:
-                    f.write(self.output)
+                self.fw.write_in_file(self.tmp_result, self.output)
                 return self.output
 
         if 'result_intense_no_ping' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -T4 -A -v -p {port} {ipv6} -Pn {target}')
-                with open(self.fw.results + f'\\result_intense_no_ping\\{target}.txt', 'w') as f:
-                    f.write(self.output)
+                self.fw.write_in_file(self.tmp_result, self.output)
                 return self.output
 
         if 'result_ping' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -sn -p {port} {ipv6} {target}')
-                with open(self.fw.results + f'\\result_ping\\{target}.txt', 'w') as f:
-                    f.write(self.output)
+                self.fw.write_in_file(self.tmp_result, self.output)
                 return self.output
 
         if 'result_quick' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -T4 -F -p {port} {ipv6} {target}')
-                with open(self.fw.results + f'\\result_quick\\{target}.txt', 'w') as f:
-                    f.write(self.output)
+                self.fw.write_in_file(self.tmp_result, self.output)
                 return self.output
 
         if 'result_traceroot' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -sn --traceroute -p {port} {ipv6} {target}')
-                with open(self.fw.results + f'\\result_traceroot\\{target}.txt', 'w') as f:
-                    f.write(self.output)
+                self.fw.write_in_file(self.tmp_result, self.output)
                 return self.output
 
         if 'result_regular' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -p {port} {ipv6} {target}')
-                with open(self.fw.results + f'\\result_regular\\{target}.txt', 'w') as f:
-                    f.write(self.output)
+                self.fw.write_in_file(self.tmp_result, self.output)
                 return self.output
 
         if 'result_large' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -sS -sU -T4 -A -v {ipv6} -p {port} -PE -PP -PS80,443 -PA3389 '
-                                           f'-PU40125 -PY -g 53 --script "default or (discovery and safe)" {target}')
-                with open(self.fw.results + f'\\result_large\\{target}.txt', 'w') as f:
-                    f.write(self.output)
+                                                f'-PU40125 -PY -g 53 --script "default or (discovery and safe)" {target}')
+                self.fw.write_in_file(self.tmp_result, self.output)
                 return self.output
 
     def db_search_IP(self, target, table_list=None):
@@ -213,46 +230,49 @@ class nmapModule:
             table_list = ['all']
         if table_list == ['all']:
             table_list = self.table_list
+        try:
+            target_hostname = socket.gethostbyaddr(target)[0]
+        except socket.herror:
+            print(f"{self.fw.WARNING} Target didn't found hostname in localhost DNS {self.fw.ENDC}")
+            target_hostname = None
         for i in table_list:
             cur = self.sql.cursor()
-            cur.execute('SELECT * FROM ' + i + ' WHERE ip == "' + target + '";')
+            if target_hostname is not None:
+                cur.execute('SELECT * FROM ' + i + ' WHERE ip == "' + target + '" or ip == "' + target_hostname + '" ;')
+            else:
+                cur.execute('SELECT * FROM ' + i + ' WHERE ip == "' + target + '" ;')
             if len(cur.fetchall()) > 0:
                 self.vpn_found = True
                 print(f'{self.fw.WARNING} FOUND VPN: {target}{self.fw.ENDC}')
                 return self.vpn_found
-        if not self.vpn_found:
-            try:
-                target = socket.gethostbyaddr(target)
-                if type(target) == tuple:
-                    target = target[0]
-                for i in table_list:
-                    cur = self.sql.cursor()
-                    cur.execute('SELECT * FROM ' + i + ' WHERE ip == "' + target + '";')
-                    if len(cur.fetchall()) > 0:
-                        self.vpn_found = True
-                        print(f'{self.fw.WARNING} FOUND VPN: {target}{self.fw.ENDC}')
-                        return self.vpn_found
-            except socket.herror:
-                print(f"{self.fw.WARNING} Target didn't found hostname in localhost DNS {self.fw.ENDC}")
-                return self.vpn_found
 
-    def hostname_analyse(self, target):
+    def hostname_analyse(self):
         """
         Func for make predict about host to her domain name in public DNS
         :return: predict
         """
-        hostname = socket.gethostbyaddr(target)
-        if ['cmcti', 'linode', 'static', 'your-server', 'clients',
-            'dynamic', 'sl-reverse', 'quantum', 'broadband', 'vnpt',
-            'nidix', 'netbynet', 'totalplay', 'vps', 'ertelecom', 'altair',
-            'megared', 'hanastar', 'oxentenet', 'rfconnect'] in hostname:
-            print(f'Strange name... {target} ==> {hostname}')
-            return target, hostname
+        try:
+            hostname = socket.gethostbyaddr(self.target)[0]
+            self.fw.write_in_file(self.tmp_result, f'TARGET HOSTNAME: {hostname}')
+            if hostname in ['cmcti', 'linode', 'static', 'your-server', 'clients',
+                            'dynamic', 'sl-reverse', 'quantum', 'broadband', 'vnpt',
+                            'nidix', 'netbynet', 'totalplay', 'vps', 'ertelecom', 'altair',
+                            'megared', 'hanastar', 'oxentenet', 'rfconnect']:
+                print(f'Strange name... {self.target} ==> {hostname}')
+                self.fw.write_in_file(self.tmp_result, f'TARGET HOSTNAME: {hostname}')
+                self.score += 1
+                return self.target, hostname
+        except socket.herror:
+            print(f"{self.fw.WARNING} Target didn't found hostname in localhost DNS {self.fw.ENDC}")
+            print(f"Try find via nmap module")
+            self.fw.write_in_file(self.tmp_result, f"{self.fw.WARNING} Target didn't found hostname "
+                                                   f"in localhost DNS {self.fw.ENDC}")
 
-    def strong_check(self, target=None, ports=None):
+            return self.target, None
+
+    def strong_check(self, ports=None):
         """
         Func for check hosts machine (PC or server)
-        :param target: ip of machine
         :param ports: searchable ports
         :return: file with result
         """
@@ -262,14 +282,88 @@ class nmapModule:
         if type(ports) == int or type(ports) == str:
             ports = list(ports)
 
-        if len(target) > 16:
+        if len(self.target) > 16:
             ipv6 = '-6'
         else:
             ipv6 = ''
 
         for port in ports:
-            result = self.command_exec(f'nmap -p {port} -Pn {ipv6} -v {target}')
-            with open(self.fw.results + f'\\result_strong_search\\{target} p {port}.txt', 'a+') as f:
-                f.write(result)
+            self.strong_output = self.command_exec(f'nmap -p {port} -Pn {ipv6} -v {self.target}')
+            self.fw.write_in_file(self.tmp_result, self.strong_output)
         self.strong_check_complete = True
-        return result
+        return self.strong_output
+
+    def retrieving_geo(self):
+        """
+        Retrieving IP geolocation with http://www.geoplugin.com/
+        :return: geolocation of target
+        """
+        self.geolocation = self.command_exec(f'cd C:\\Program Files (x86)\\Nmap && '
+                                             f'nmap --script ip-geolocation-geoplugin {self.target}')
+        if self.geolocation.find(', try -Pn'):
+            self.geolocation = self.command_exec(f'cd C:\\Program Files (x86)\\Nmap && '
+                                                 f'nmap --script ip-geolocation-geoplugin {self.target}')
+        try:
+            arr_values = []
+            for i in self.geolocation.split('\n'):
+                if len(i) > 0:
+                    if i[0] == '|' and len(arr_values) == 0:
+                        arr_values.append(f'coordinates: {i.replace("| ip-geolocation-geoplugin: coordinates: ", "")}')
+                    elif i[0] == '|' and len(arr_values) != 0:
+                        arr_values.append(f'location: {i.replace("|_location: ", "")}')
+            arr_values.insert(0, '\n')
+            self.fw.write_in_file(self.tmp_result, f'\nIP ADDRESS LOCATION: {arr_values[-1]}, '
+                                                   f'\nCOORDINATES: {arr_values[0]}')
+            return arr_values
+        except:
+            print("Script didn't found IP address location")
+
+    def whois_ip_nmap(self, country='RU'):
+        """
+        Func for find owner of this IP address. Owner from other country,
+        city etc. can be a signal for VPN
+        :return: info about owner of IP address
+        """
+        self.owner = self.command_exec(f'cd C:\\Program Files (x86)\\Nmap && '
+                                       f'nmap {self.target} --script whois-ip')
+        if self.owner.find(', try -Pn'):
+            self.owner = self.command_exec(f'cd C:\\Program Files (x86)\\Nmap && '
+                                           f'nmap {self.target} --script whois-ip')
+        try:
+            arr_values = []
+            for i in self.owner.split('\n'):
+                if len(i) > 0:
+                    if i[0] == '|' and i[2] != 'w':
+                        arr_values.append(i.replace('|_', '').replace('| ', ''))
+            arr_values.insert(0, '\n')
+            self.fw.write_in_file(self.tmp_result, '\n'.join(arr_values))
+            return arr_values
+        except:
+            print("Script didn't found information about owner")
+
+    def traceroute_with_geo(self):
+        """
+        Traceroute information a
+        :return:
+        """
+        self.trace = self.command_exec(f'cd C:\\Program Files (x86)\\Nmap && '
+                                       f'nmap --traceroute --script traceroute-geolocation {self.target}')
+        if self.trace.find(', try -Pn'):
+            self.trace = self.command_exec(f'cd C:\\Program Files (x86)\\Nmap && '
+                                           f'nmap --traceroute --script traceroute-geolocation {self.target}')
+        try:
+            arr_values = []
+            for i in self.trace.split('\n'):
+                if len(i) > 0:
+                    if i[0] == '|' and i[2] != 't':
+                        arr_values.append(i.replace('|_  ', '').replace('|   ', ''))
+            country_arr = []
+            for i in arr_values:
+                if i.split(',')[-1].split(' ')[2][0] != 'R':
+                    country_arr.append(i.split(',')[-1].split(' ')[1])
+            self.all_country_trace=list(set(country_arr[-1]))
+            arr_values.insert(0, '\n')
+            self.fw.write_in_file(self.tmp_result, '\n'.join(arr_values))
+            return arr_values
+        except:
+            print("Script didn't found traceroute info")
