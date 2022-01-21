@@ -16,11 +16,11 @@ class nmapWizard(nmapModule):
         Default {'traceroute': True, 'geoip':True, 'owner': True}
         target ip address
         """
-        super().__init__()
+        super().__init__(target)
         self.result_strong = None
         self.kwargs_default = {'traceroute': True,
-                                'geoip':True,
-                                'owner': True}
+                               'geoip': True,
+                               'owner': True}
         if self.kwargs_default.keys() == kwargs.keys():
             self.script_dict = kwargs
         else:
@@ -67,14 +67,18 @@ class nmapWizard(nmapModule):
         :return: check result or False
         """
         methods = [i for i in os.walk('./results')][0][1]
-        data = self.fw.read_from_file(self.fw.results + '\\result_regular\\' + self.target + '.txt')
+        data = self.fw.read_from_file(self.tmp_result + self.target + '.txt')
         if data.find(', try -Pn') != -1:
             self.result_strong = self.strong_check(self.target)
             return self.result_strong
         else:
             return False
 
-    def pars_result(self, target):
+    def pars_result(self):
+        """
+        Func for pars result of analysis
+        :return: None
+        """
         if self.strong_check_complete:
             arr_data = self.result_strong.split('\n')
         else:
@@ -104,7 +108,10 @@ class nmapWizard(nmapModule):
             n += 1
 
     def result(self):
-
+        """
+        Func for scoring of probability of VPN on target
+        :return: True if VPN, else False
+        """
         if not self.vpn_check and sum(self.ports_checker) >= 6:
             self.vpn_check = True
         print('ANALYSE RESULT: ')
@@ -113,3 +120,11 @@ class nmapWizard(nmapModule):
         else:
             print('IP address, probably, not VPN')
         return self.vpn_check
+
+    def mv_in_results(self):
+        """
+        Func for move tmp_file to final dir
+        :return: None
+        """
+        self.command_exec(f'move .\\Tmp_storage\\{self.target}.txt .\\FINAL_RESULTS')
+

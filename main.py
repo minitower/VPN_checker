@@ -10,8 +10,13 @@ def main(target, methods=None):
     :return: VPN or not
     """
     vpn_check = False
-    nmapWizard(target=target, auto=True)
+    nmap = nmapModule(target)
+    print(nmap.whois_ip_nmap())
+    print(nmap.traceroute_with_geo())
+    print(nmap.windows_default_scan())
+    print(nmap.retrieving_geo())
+    #nmapWizard(target=target, auto=True)
 
 
 if __name__ == '__main__':
-    main('85.151.156.12')
+    main('8.8.8.8')
