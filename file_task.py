@@ -12,6 +12,7 @@ class FileWork:
         self.downloaded = []
         if os.name == 'nt':
             self.cs = '\\'
+            self.ENCODE_TABLE = 'cp866'
         else:
             self.cs = '/'
 
