@@ -148,7 +148,7 @@ class nmapModule:
         :param ports: interval of ports to analyse or all
         :param methods: methods (one or list from [result_intense, result_intense udp,
         result_intense tcp, result_intense no ping, ping, quick,
-        traceroot, regular, slow])
+        traceroute, regular, slow])
         :return: results
         """
         if methods is None:
@@ -171,43 +171,50 @@ class nmapModule:
         if 'result_intense' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -p {port} -T4 -A {ipv6} -v {self.target}')
-                self.fw.write_in_file(self.tmp_result, self.output)
+                self.output = '\n'.join(self.output.split('\n')[2:])
+                self.fw.write_in_file(self.tmp_result, '\n' + self.output)
                 return self.output
 
         if 'result_intense_udp' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -p {port} -sS -sU -T4 {ipv6} -A -v {self.target}')
-                self.fw.write_in_file(self.tmp_result, self.output)
+                self.output = '\n'.join(self.output.split('\n')[2:])
+                self.fw.write_in_file(self.tmp_result, '\n' + self.output)
                 return self.output
 
         if 'result_intense_no_ping' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -T4 -A -v -p {port} {ipv6} -Pn {self.target}')
-                self.fw.write_in_file(self.tmp_result, self.output)
+                self.output = '\n'.join(self.output.split('\n')[2:])
+                self.fw.write_in_file(self.tmp_result, '\n' + self.output)
                 return self.output
 
         if 'result_ping' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -sn -p {port} {ipv6} {self.target}')
-                self.fw.write_in_file(self.tmp_result, self.output)
+                self.output = '\n'.join(self.output.split('\n')[2:])
+                self.fw.write_in_file(self.tmp_result, '\n' + self.output)
                 return self.output
 
         if 'result_quick' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -T4 -F -p {port} {ipv6} {self.target}')
-                self.fw.write_in_file(self.tmp_result, self.output)
+                self.output = '\n'.join(self.output.split('\n')[2:])
+                self.fw.write_in_file(self.tmp_result, '\n' + self.output)
                 return self.output
 
-        if 'result_traceroot' in methods:
+        if 'result_traceroute' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -sn --traceroute -p {port} {ipv6} {self.target}')
-                self.fw.write_in_file(self.tmp_result, self.output)
+                self.output = '\n'.join(self.output.split('\n')[2:])
+                self.fw.write_in_file(self.tmp_result, '\n' + self.output)
                 return self.output
 
         if 'result_regular' in methods:
             for port in ports:
                 self.output = self.command_exec(f'nmap -p {port} {ipv6} {self.target}')
-                self.fw.write_in_file(self.tmp_result, self.output)
+                self.output = '\n'.join(self.output.split('\n')[2:])
+                self.fw.write_in_file(self.tmp_result, '\n' + self.output)
                 return self.output
 
         if 'result_large' in methods:
@@ -215,7 +222,8 @@ class nmapModule:
                 self.output = self.command_exec(f'nmap -sS -sU -T4 -A -v {ipv6} -p {port} -PE -PP -PS80,443 -PA3389 '
                                                 f'-PU40125 -PY -g 53 '
                                                 f'--script "default or (discovery and safe)" {self.target}')
-                self.fw.write_in_file(self.tmp_result, self.output)
+                self.output = '\n'.join(self.output.split('\n')[2:])
+                self.fw.write_in_file(self.tmp_result, '\n' + self.output)
                 return self.output
 
     def db_search_IP(self, table_list=None):
@@ -289,6 +297,7 @@ class nmapModule:
 
         for port in ports:
             self.strong_output = self.command_exec(f'nmap -p {port} -Pn {ipv6} -v {self.target}')
+            self.strong_output = '\n'.join(self.strong_output.split('\n')[2:])
             self.fw.write_in_file(self.tmp_result, self.strong_output)
         self.strong_check_complete = True
         return self.strong_output
@@ -305,14 +314,13 @@ class nmapModule:
                                                  f'nmap -Pn --script ip-geolocation-geoplugin {self.target}')
         arr_values = []
         for i in self.geolocation.split('\n'):
-            if len(i) > 0:
-                if i[0] == '|' and len(arr_values) == 0:
-                    arr_values.append(f'coordinates: {i.replace("| ip-geolocation-geoplugin: coordinates: ", "")}')
-                elif i[0] == '|' and len(arr_values) != 0:
-                    arr_values.append(f'location: {i.replace("|_location: ", "")}')
+            if len(i) > 0 and i[0] == '|' and len(arr_values) == 0:
+                arr_values.append(f'coordinates: {i.replace("| ip-geolocation-geoplugin: coordinates: ", "")}')
+            elif len(i) > 0 and i[0] == '|' and len(arr_values) != 0:
+                arr_values.append(f'location: {i.replace("|_location: ", "")}')
         arr_values.insert(0, '\n')
-        self.fw.write_in_file(self.tmp_result, f'\nIP ADDRESS LOCATION: {arr_values[-1]}, '
-                                               f'\nCOORDINATES: {arr_values[0]}')
+        self.fw.write_in_file(self.tmp_result, f'\nIP ADDRESS LOCATION: {arr_values[2]}, '
+                                               f'\nCOORDINATES: {arr_values[1]}')
         return arr_values
 
     def whois_ip_nmap(self, country='RU'):
