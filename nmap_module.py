@@ -45,7 +45,17 @@ class nmapModule:
         self.tmp_result = self.fw.tmp_storage + f'\\{self.target}.txt'
         with open(self.tmp_result, 'w') as f:
             f.write('Library for VPN check in ip address')
+            print('Library for VPN check in ip address')
             f.write(r'''
+     _   _ __  __          _____   __      _______  _   _    _____ _    _ ______ _____ _  ________ _____  
+    | \ | |  \/  |   /\   |  __ \  \ \    / /  __ \| \ | |  / ____| |  | |  ____/ ____| |/ /  ____|  __ \ 
+    |  \| | \  / |  /  \  | |__) |  \ \  / /| |__) |  \| | | |    | |__| | |__ | |    | ' /| |__  | |__) |
+    | . ` | |\/| | / /\ \ |  ___/    \ \/ / |  ___/| . ` | | |    |  __  |  __|| |    |  < |  __| |  _  / 
+    | |\  | |  | |/ ____ \| |         \  /  | |    | |\  | | |____| |  | | |___| |____| . \| |____| | \ \ 
+    |_| \_|_|  |_/_/    \_\_|          \/   |_|    |_| \_|  \_____|_|  |_|______\_____|_|\_\______|_|  \_\
+                                                                                                       
+                                                                                                       ''')
+            print(r'''
      _   _ __  __          _____   __      _______  _   _    _____ _    _ ______ _____ _  ________ _____  
     | \ | |  \/  |   /\   |  __ \  \ \    / /  __ \| \ | |  / ____| |  | |  ____/ ____| |/ /  ____|  __ \ 
     |  \| | \  / |  /  \  | |__) |  \ \  / /| |__) |  \| | | |    | |__| | |__ | |    | ' /| |__  | |__) |
@@ -319,6 +329,10 @@ class nmapModule:
             elif len(i) > 0 and i[0] == '|' and len(arr_values) != 0:
                 arr_values.append(f'location: {i.replace("|_location: ", "")}')
         arr_values.insert(0, '\n')
+        if arr_values[2] != 'Russia':
+            self.score += 5
+            print(f'{self.fw.WARNING}FIND FOREIGN IP ADDRESS {self.target}'
+                  f'{self.fw.ENDC}')
         self.fw.write_in_file(self.tmp_result, f'\nIP ADDRESS LOCATION: {arr_values[2]}, '
                                                f'\nCOORDINATES: {arr_values[1]}')
         return arr_values

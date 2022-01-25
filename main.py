@@ -6,7 +6,7 @@ from nmap_wizard import nmapWizard
 def main(target, methods=None):
     """
     Main point to start VPN checker
-    :param target: IP of taqrget
+    :param target: IP of target
     :return: VPN or not
     """
     vpn_check = False
