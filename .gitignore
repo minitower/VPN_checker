@@ -1,3 +1,11 @@
 .env
-venv
 Tmp_storage/*
+__pycache__
+Data_storage/__pycache__
+extra/__pycache__
+FINAL_RESULTS/__pycache__
+nmap_module/__pycache__
+helpful_func/__pycache__
+SQLFunc/__pycache__
+tests/__pycache__
+vpn_check/__pycache__
