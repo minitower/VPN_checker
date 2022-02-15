@@ -1,4 +1,5 @@
 .env
+Tmp_storage/*
 __pycache__
 extra/__pycache__
 FINAL_RESULTS/__pycache__
