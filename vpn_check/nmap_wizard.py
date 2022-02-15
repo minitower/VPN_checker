@@ -1,7 +1,7 @@
 import socket
 
-from vpn_check.nmap_module import nmapModule
-from etc.file_task import FileWork
+from nmap_module import nmapModule
+from extra.file_task import FileWork
 import os
 
 
