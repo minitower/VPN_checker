@@ -76,9 +76,16 @@ def main(target, methods=None):
 
 if __name__ == '__main__':
     
-    fw = FileWork()
-    target_df = load_target_ip(date=r'2022-01-01')
-    target_df = target_df.loc[target_df['IP'].str.len() <= 16] # temporatly work for IPv4 only
+   # fw = FileWork()
+   # target_df = load_target_ip(date=r'2022-01-01')
+   # target_df = target_df.loc[target_df['IP'].str.len() <= 16] # temporatly work for IPv4 only
+    df = pd.read_csv('./Data_storage/IP_2022.01.01-2022.02.14.csv')
+    df.set_index('click_id')
     
-    with Pool(p_num) as pool:
-        pool.map_async(main, target_df['IP'].values)
+
+    nmap = nmapModule(df['IP'].iloc[0])
+    nmap.retrieving_geo()
+    nmap.db_search_IP()
+    nmap.traceroute_with_geo()
+    nmap.whois_ip_nmap()
+    nmap.full_info()
