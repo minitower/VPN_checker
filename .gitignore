@@ -10,4 +10,5 @@ tests/__pycache__
 vpn_check/__pycache__
 Data_storage/*
 Tmp_storage/*
+final/*
 

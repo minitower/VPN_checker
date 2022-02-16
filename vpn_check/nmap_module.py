@@ -12,7 +12,7 @@ class nmapModule:
 
     def __init__(self, target=None):
         """
-        Func for initialisation checking ip address for
+        Func for initialization checking ip address for
         1) VPN by 2 method: ping VPN port or connect to VPN ports
         2) location of IP (by domain)
         3) check for time of up host in Ethernet
@@ -38,7 +38,7 @@ class nmapModule:
             self.packet_trace = '--packet-trace'
         else:
             self.packet_trace = ''
-        self.optimisation_str = f'--max-retries {self.max_retry} --host-timeout {self.timeout} '+ \
+        self.optimization_str = f'--max-retries {self.max_retry} --host-timeout {self.timeout} '+ \
                                 f'--min-parallelism {self.parallel} --min-rate {self.rate} ' + \
                                     self.packet_trace
         self.port_closed = None
@@ -145,7 +145,7 @@ class nmapModule:
         Retrieving IP geolocation with http://www.geoplugin.com/
         :return: geolocation of target
         """
-        self.command_exec(f'sudo nmap --script ip-geolocation-geoplugin +{self.optimisation_str}+ {self.target} \
+        self.command_exec(f'sudo nmap --script ip-geolocation-geoplugin +{self.optimization_str}+ {self.target} \
             -oX {self.fw.tmp_storage}/{self.target}_geo.xml ')
 
     def whois_ip_nmap(self, country='RU'):
@@ -154,8 +154,8 @@ class nmapModule:
         city etc. can be a signal for VPN
         :return: info about owner of IP address
         """
-        self.command_exec(f'sudo nmap {self.target} -oX {self.fw.tmp_storage}/\
-            {self.target}_whois.xml --script whois-ip ' + self.optimisation_str)
+        self.command_exec(f'sudo nmap {self.target} --script whois-ip ' + self.optimization_str + \
+                          f'-oX {self.fw.tmp_storage}/{self.target}_whois.xml')
 
     def traceroute_with_geo(self):
         """
@@ -163,7 +163,7 @@ class nmapModule:
         :return: info path to IP address
         """
         self.command_exec(f'sudo nmap --traceroute -oX {self.fw.tmp_storage}/\
-            {self.target}_traceroute.xml {self.target} ' + self.optimisation_str)
+            {self.target}_traceroute.xml {self.target} ' + self.optimization_str)
         
     def full_info(self):
         """
@@ -171,7 +171,7 @@ class nmapModule:
         type of services on them, etc.) 
         This gives the most large information, but too slow for regular analysis
         """
-        self.command_exec(f'sudo nmap -A 185.22.206.72 -oX {self.fw.tmp_storage}/{self.target}_full.xml ' + self.optimisation_str)
+        self.command_exec(f'sudo nmap -A 185.22.206.72 -oX {self.fw.tmp_storage}/{self.target}_full.xml ' + self.optimization_str)
     
     def ping(self):
         """
