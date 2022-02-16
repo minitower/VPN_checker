@@ -1,5 +1,6 @@
 from cProfile import label
 from email import message
+from typing import final
 import warnings
 import xml.etree.ElementTree as ET
 import os
@@ -153,6 +154,52 @@ class XML_parse:
         """
         Func for parse result of traceroute nmapModule analysis
         """
+        tree = self.dict_trees['traceroute']
+        root = tree.getroot()
+        hop_key_arr = []
+        trace_str = ''
+        self.dict_traceroute = {
+            'state': list(list(root)[3])[0].attrib['state'],
+            'hostname': list(list(list(root)[4])[2])[0].attrib['name'], 
+            'elapsed': list(list(root)[5])[0].attrib['elapsed']
+        }
+        
+        for i in list(list(list(root)[4])[4])[:]:
+            if 'host' in i.keys() :
+                self.dict_traceroute.update({'hop_'+i.attrib['ttl']: \
+                    '\n\t' + 'IP: ' + i.attrib['ipaddr'] + '\t' + \
+                               'RTT: ' + i.attrib['rtt'] +  '\t' + \
+                               'HOST: ' + i.attrib['host']})
+            else:
+                    self.dict_traceroute.update({'hop_'+i.attrib['ttl']: \
+                    '\n\t' + 'IP: ' + i.attrib['ipaddr'] + '\t' + \
+                               'RTT: ' + i.attrib['rtt'] +  '\t' + \
+                               'HOST: not found on home DNS network'})
+            
+            
+            hop_key_arr.append('hop_'+i.attrib['ttl'])
+        
+        for i in hop_key_arr:
+            trace_str += self.dict_traceroute[i]
+
+        message = f'''
+        ------------TRACEROOT REPORT------------
+        STATE: {self.dict_traceroute['state']}
+        HOSTNAME: {self.dict_traceroute['hostname']}
+        TRACE:{trace_str}
+        ELAPSED: {self.dict_traceroute['elapsed']}
+        '''
+        
+        print(message)
+        self.fw.write_in_file(f'final/{self.target}.txt', 
+                              message=message)
+        return self.dict_traceroute
+        
+            
+    def port_parse(self):
+        """
+        Func for parse result of nmapModule port scan
+        """
         
     def geo_parse(self):
         """
@@ -200,19 +247,71 @@ class XML_parse:
         print(message)
         self.fw.write_in_file(f'final/{self.target}.txt', message=message)
         return self.geo_dict
-            
-        
+             
     def full_parse(self):
         """
         Func for parse result of full host info nmapModule analyse
         """
         tree = self.dict_trees['full']
         root = tree.getroot()
+        arr_existed_ports = []
         self.dict_full = {
             'state': list(list(root)[4])[0].attrib['state'],
-            'hostname': list(list(list(root)[4])[2])[0].attrib['name']
-                
+            'hostname': list(list(list(root)[4])[2])[0].attrib['name'],
+            'n_closed': list(list(list(root)[4])[3])[0].attrib['count'],
+            'os name':  list(list(list(root)[4])[4])[1].attrib['name'],
+            'os info accuracy': list(list(list(root)[4])[4])[1].attrib['accuracy'],
+            'os type': list(list(list(list(root)[4])[4])[1])[0].attrib['type'],
+            'os vendor': list(list(list(list(root)[4])[4])[1])[0].attrib['vendor'],
+            'os family': list(list(list(list(root)[4])[4])[1])[0].attrib['osfamily'],
+            'os generation': list(list(list(list(root)[4])[4])[1])[0].attrib['osgen'], 
+            'uptime': list(list(root)[4])[5].attrib['seconds'], 
+            'lastboot': list(list(root)[4])[5].attrib['lastboot'],
+            'distance': list(list(root)[4])[6].attrib['value'],
+            'srtt': list(list(root)[4])[11].attrib['srtt'],
+            'rttvar': list(list(root)[4])[11].attrib['rttvar'],
+            'to': list(list(root)[4])[11].attrib['to'],
+            'elapsed': list(list(root)[5])[0].attrib['elapsed'],
         }
+        for i in list(list(list(root)[4])[3])[1:]:
+            arr_existed_ports.append((list(list(list(root)[4])
+                                        [3])[1].attrib['portid'],
+                                   list(list(list(list(root)[4])[3])
+                                        [1])[0].attrib['state'],
+                                   list(list(list(list(root)[4])[3])
+                                        [1])[1].attrib['name']))
+        str_open_ports = ''
+        for i in arr_existed_ports:
+            str_open_ports += f'''
+            PORT: {i[0]}\tSTATE: {i[1]}\tSERVICE: {i[2]}\n    
+            '''
+        
+        
+        message = f"""
+        ------------FULL HOST REPORT------------
+        STATE: {self.dict_full['state']}
+        HOSTNAME: {self.dict_full['hostname']}
+        № CLOSED PORTS: {self.dict_full['n_closed']}
+        OPEN PORTS: 
+            {str_open_ports}
+        OS NAME: {self.dict_full['os name']}
+        OS INFO ACCURACY: {self.dict_full['os info accuracy']}
+        OS TYPE: {self.dict_full['os type']}
+        OS VENDOR: {self.dict_full['os vendor']}
+        OS FAMILY: {self.dict_full['os family']}
+        OS GENERATION: {self.dict_full['os generation']}
+        UPTIME: {self.dict_full['uptime']}
+        LASTBOOT: {self.dict_full['lastboot']}
+        DISTANCE: {self.dict_full['distance']}
+        SRTT: {self.dict_full['srtt']}
+        RTTVAR: {self.dict_full['rttvar']}
+        TO: {self.dict_full['to']}
+        ELAPSED: {self.dict_full['elapsed']}
+        ------------END FULL REPORT------------
+        """
+        print(message)
+        self.fw.write_in_file(f'final/{self.target}.txt', message=message)
+        return self.dict_full
 
     def finalize(self, save=True):
         """
@@ -248,4 +347,6 @@ class XML_parse:
                 geo_result = self.geo_parse()
             if i == 'full':
                 full_result = self.full_parse()
+            if i == 'traceroute':
+                trace_result = self.traceroute_parse()
             
