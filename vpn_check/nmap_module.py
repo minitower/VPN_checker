@@ -1,20 +1,16 @@
 import os
-import shutil
 import socket
 import sqlite3
 import subprocess as sp
-import traceback
-import warnings
-
+from dotenv import load_dotenv
 import pandas as pd
-import requests
 
 from extra.file_task import FileWork
 
 
 class nmapModule:
 
-    def __init__(self, target=None, nmap_install=False):
+    def __init__(self, target=None):
         """
         Func for initialisation checking ip address for
         1) VPN by 2 method: ping VPN port or connect to VPN ports
@@ -33,6 +29,7 @@ class nmapModule:
         self.strong_output = None
         self.output = None
         self.ports_checker = []
+        load_dotenv()
         self.timeout = os.environ.get('TIMEOUT')
         self.max_retry = os.environ.get('MAX_RETRY')
         self.parallel = os.environ.get('PARALLEL')
@@ -41,8 +38,8 @@ class nmapModule:
             self.packet_trace = '--packet-trace'
         else:
             self.packet_trace = ''
-        self.optimisation_str = f'--max-retries {self.max_retry} --host-timeout {self.timeout} \
-                                --min-parallelism {self.parallel} --min-rate {self.rate}' + \
+        self.optimisation_str = f'--max-retries {self.max_retry} --host-timeout {self.timeout} '+ \
+                                f'--min-parallelism {self.parallel} --min-rate {self.rate} ' + \
                                     self.packet_trace
         self.port_closed = None
         self.strong_host_down = None
@@ -54,27 +51,7 @@ class nmapModule:
         self.vpn_found = False
         self.score = 0
         self.tmp_result = self.fw.tmp_storage / f'{self.target}.txt'
-        #with open(self.tmp_result, 'w') as f:
-        #    f.write('Library for VPN check in ip address')
-        #    print('Library for VPN check in ip address')
-        #    f.write(r'''
-    # _   _ __  __          _____   __      _______  _   _    _____ _    _ ______ _____ _  ________ _____  
-    #| \ | |  \/  |   /\   |  __ \  \ \    / /  __ \| \ | |  / ____| |  | |  ____/ ____| |/ /  ____|  __ \ 
-    #|  \| | \  / |  /  \  | |__) |  \ \  / /| |__) |  \| | | |    | |__| | |__ | |    | ' /| |__  | |__) |
-    #| . ` | |\/| | / /\ \ |  ___/    \ \/ / |  ___/| . ` | | |    |  __  |  __|| |    |  < |  __| |  _  / 
-    #| |\  | |  | |/ ____ \| |         \  /  | |    | |\  | | |____| |  | | |___| |____| . \| |____| | \ \ 
-    #|_| \_|_|  |_/_/    \_\_|          \/   |_|    |_| \_|  \_____|_|  |_|______\_____|_|\_\______|_|  \_\
-    #                                                                                                   
-    #                                                                                                   ''')
-    #        print(r'''
-    # _   _ __  __          _____   __      _______  _   _    _____ _    _ ______ _____ _  ________ _____  
-    #| \ | |  \/  |   /\   |  __ \  \ \    / /  __ \| \ | |  / ____| |  | |  ____/ ____| |/ /  ____|  __ \ 
-    #|  \| | \  / |  /  \  | |__) |  \ \  / /| |__) |  \| | | |    | |__| | |__ | |    | ' /| |__  | |__) |
-    #| . ` | |\/| | / /\ \ |  ___/    \ \/ / |  ___/| . ` | | |    |  __  |  __|| |    |  < |  __| |  _  / 
-    #| |\  | |  | |/ ____ \| |         \  /  | |    | |\  | | |____| |  | | |___| |____| . \| |____| | \ \ 
-    #|_| \_|_|  |_/_/    \_\_|          \/   |_|    |_| \_|  \_____|_|  |_|______\_____|_|\_\______|_|  \_\
-    #                                                                                                   
-    #                                                                                                   ''')
+        
         self.table_list = ['HTTP_proxies',
                            'L2TP_IPsec',
                            'SOCKS_5',
@@ -85,7 +62,9 @@ class nmapModule:
         self.cur.execute('select * from vpn_ports;')
         self.default_ports = pd.DataFrame(self.cur.fetchall(), columns=['port', 'protocol', 'common'])
         self.warning_ports = self.default_ports.copy()
-        self.default_ports = list(self.default_ports.loc[self.default_ports['common'] == 'FALSE']['port'].values)
+        self.default_ports = self.default_ports.drop_duplicates(subset=['port'])
+        self.default_ports = list(self.default_ports.loc[self.default_ports['common'] == 'FALSE']['port'].values.astype('str'))
+        self.ports_str = ', '.join(self.default_ports)
         self.scoring_dict = {'open_port': 1,
                              'open_vpn_port': 3,
                              'filtered_port': 2,
@@ -183,7 +162,7 @@ class nmapModule:
         Traceroute information about target IP address
         :return: info path to IP address
         """
-        self.command_exec(f'sudo nmap --traceroute --script traceroute-geolocation -oX {self.fw.tmp_storage}/\
+        self.command_exec(f'sudo nmap --traceroute -oX {self.fw.tmp_storage}/\
             {self.target}_traceroute.xml {self.target} ' + self.optimisation_str)
         
     def full_info(self):
@@ -194,3 +173,21 @@ class nmapModule:
         """
         self.command_exec(f'sudo nmap -A 185.22.206.72 -oX {self.fw.tmp_storage}/{self.target}_full.xml ' + self.optimisation_str)
     
+    def ping(self):
+        """
+        Fast way to find host state
+        Use only for host without firewall
+        """
+        self.command_exec(f'sudo nmap -sn {self.target} \
+                            -oX {self.fw.tmp_storage}/{self.target}_ping.xml')
+    
+    def subnet_discover(self):
+        """
+        Fast way to discover host with ping probe of subnet.
+        Use if hostname of host is not define
+        """
+        self.subnet = self.target.split('.')
+        self.subnet [-1] = '0/24'
+        self.subnet = '.'.join(self.subnet)
+        self.command_exec(f'sudo nmap {self.subnet} \
+                            -oX {self.fw.tmp_storage}/{self.target}_subnet.xml')

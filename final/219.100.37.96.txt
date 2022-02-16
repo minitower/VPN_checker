@@ -1,0 +1,13 @@
+
+        ------------PING REPORT------------
+
+        START_AT: 22-02-16 08:45:33
+
+        HOST STATE: up
+
+        HOSTNAME: public-vpn-06-16.vpngate.v4.open.ad.jp
+
+        SMOOTHED I/O TIME: 184586
+
+        VARIANCE OF TRIP: 184586
+        

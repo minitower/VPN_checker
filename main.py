@@ -22,8 +22,7 @@ def main():
     df = pd.read_csv('./Data_storage/IP_2022.01.01-2022.02.14.csv')
     df = df.set_index('click_id')
     
-    print(df['IP'].iloc[0])
-
+    #print(df['IP'].iloc[0])
     nmap = nmapModule(df['IP'].iloc[0])
     nmap.retrieving_geo()
     nmap.db_search_IP()
