@@ -145,25 +145,16 @@ class nmapModule:
         Retrieving IP geolocation with http://www.geoplugin.com/
         :return: geolocation of target
         """
-        self.command_exec(f'sudo nmap --script ip-geolocation-geoplugin +{self.optimization_str}+ {self.target} \
-            -oX {self.fw.tmp_storage}/{self.target}_geo.xml ')
-
-    def whois_ip_nmap(self, country='RU'):
-        """
-        Func for find owner of this IP address. Owner from other country,
-        city etc. can be a signal for VPN
-        :return: info about owner of IP address
-        """
-        self.command_exec(f'sudo nmap {self.target} --script whois-ip ' + self.optimization_str + \
-                          f'-oX {self.fw.tmp_storage}/{self.target}_whois.xml')
+        return self.command_exec('sudo nmap --script ip-geolocation-geoplugin ' + self.optimization_str + ' ' + self.target + \
+            f' -oX {self.fw.tmp_storage}/{self.target}_geo.xml')
 
     def traceroute_with_geo(self):
         """
         Traceroute information about target IP address
         :return: info path to IP address
         """
-        self.command_exec(f'sudo nmap --traceroute -oX {self.fw.tmp_storage}/\
-            {self.target}_traceroute.xml {self.target} ' + self.optimization_str)
+        return self.command_exec(f'sudo nmap --traceroute {self.target} ' + self.optimization_str + \
+            f' -oX {self.fw.tmp_storage}/{self.target}_traceroute.xml')
         
     def full_info(self):
         """

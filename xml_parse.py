@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 
 from attr import attrib
+from telegram import Location
 from extra.file_task import FileWork
 from pathlib import Path
 
@@ -143,17 +144,11 @@ class XML_parse:
                 elif n == file_limit+1:
                     print(f"{self.fw.WARNING}For create a readable file script didn't write in final file more then {file_limit} ping report in a row. "
                           f"If you didn't agree with this decision you can fix it with .env file in MAX_PING_FILE variable{self.fw.ENDC}")
-        end_message = '------------END OF SUBNET DISCOVER------------'
+        end_message = '\t------------END OF SUBNET DISCOVER------------\n\n'
         print(end_message)
         self.fw.write_in_file(f'final/{self.target}.txt', end_message)
         return self.subnet_host_dict
                           
-                
-    def whois_parse(self):
-        """
-        Func for parse result of whois nmapModule analysis
-        """
-
     def traceroute_parse(self):
         """
         Func for parse result of traceroute nmapModule analysis
@@ -163,7 +158,54 @@ class XML_parse:
         """
         Func for parse result of traceroute nmapModule analysis
         """
-
+        tree = self.dict_trees['geo']
+        root = tree.getroot()
+        attr_arr = []
+        
+        self.geo_dict = {
+            'start time': list(root)[4].attrib['starttime'],
+            'state': list(list(root)[3])[0].attrib['state'],
+            'hostname': list(list(list(root)[4])[2])[0].attrib['name'],
+            'end time': list(root)[4].attrib['endtime'],
+            'elapsed': list(list(root)[5])[0].attrib['elapsed'],
+        }
+        
+        for i in list(list(list(list(root)[4])[4])[0]):
+            self.geo_dict.update({i.attrib['key']: i.text})
+            attr_arr.append(i.attrib['key'])
+        
+        # For pretty time format
+        time = datetime.utcfromtimestamp(int(self.geo_dict  
+                    ['start time'])).strftime("%y-%m-%d %H:%M:%S")
+        self.geo_dict.update({'pretty start time': time})
+        
+        time = datetime.utcfromtimestamp(int(self.geo_dict
+                    ['end time'])).strftime("%y-%m-%d %H:%M:%S")
+        self.geo_dict.update({'pretty end time': time})
+        
+        message = f"""
+        ------------GEO PLUGIN (NSE)------------
+        START AT: {self.geo_dict['pretty start time']}
+        STATE: {self.geo_dict['state']}
+        HOSTNAME: {self.geo_dict['hostname']}
+        LATITUDE: {self.geo_dict['latitude']}
+        LONGITUDE: {self.geo_dict['longitude']}
+        CITY: {self.geo_dict['city']}
+        REGION: {self.geo_dict['region']}
+        COUNTRY: {self.geo_dict['country']}
+        END AT: {self.geo_dict['pretty end time']}
+        ELAPSED: {self.geo_dict['elapsed']}
+        -------------END GEO PLUGIN-------------
+        """
+        print(message)
+        self.fw.write_in_file(f'final/{self.target}.txt', message=message)
+        return self.geo_dict
+            
+        
+    def full(self):
+        """
+        Func for parse result of full host info nmapModule analyse
+        """
 
     def finalize(self, save=True):
         """
@@ -195,4 +237,6 @@ class XML_parse:
                 ping_result = self.ping_parse()
             if i == 'subnet':
                 subnet_result = self.subnet_parse()
+            if i == 'geo':
+                geo_result = self.geo_parse()
             
