@@ -202,10 +202,17 @@ class XML_parse:
         return self.geo_dict
             
         
-    def full(self):
+    def full_parse(self):
         """
         Func for parse result of full host info nmapModule analyse
         """
+        tree = self.dict_trees['full']
+        root = tree.getroot()
+        self.dict_full = {
+            'state': list(list(root)[4])[0].attrib['state'],
+            'hostname': list(list(list(root)[4])[2])[0].attrib['name']
+                
+        }
 
     def finalize(self, save=True):
         """
@@ -239,4 +246,6 @@ class XML_parse:
                 subnet_result = self.subnet_parse()
             if i == 'geo':
                 geo_result = self.geo_parse()
+            if i == 'full':
+                full_result = self.full_parse()
             

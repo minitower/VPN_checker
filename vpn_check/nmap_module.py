@@ -171,6 +171,16 @@ class nmapModule:
         """
         self.command_exec(f'sudo nmap -sn {self.target} \
                             -oX {self.fw.tmp_storage}/{self.target}_ping.xml')
+        
+    def port_analyse(self):
+        """
+        Func for ICMP (or TCP connect) to port in host computer.
+        This func are very useful for host without location, unknown state, 
+        false trace of packet etc.
+        Func have medium speed, reasonable to use
+        """
+        return self.command_exec(f'sudo nmap -p {self.default_ports} {self.target} '+\
+            f'-oX {self.fw.tmp_storage}/{self.target}_ports.xml ' + self.optimization_str)
     
     def subnet_discover(self):
         """
