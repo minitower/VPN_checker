@@ -115,30 +115,14 @@ class nmapModule:
                 print(f'{self.fw.WARNING} FOUND VPN: {self.target}{self.fw.ENDC}')
                 return self.vpn_found
 
-
-    def strong_check(self, ports=None):
+    def strong_ping(self, ports=None):
         """
         Func for check hosts machine (PC or server)
         :param ports: searchable ports
         :return: file with result
         """
-        if ports is None:
-            ports = self.default_ports
-
-        if type(ports) == int or type(ports) == str:
-            ports = list(ports)
-
-        if len(self.target) > 16:
-            ipv6 = '-6'
-        else:
-            ipv6 = ''
-
-        for port in ports:
-            self.strong_output = self.command_exec(f'nmap -p {port} -Pn {ipv6} -v {self.target} -oX {self.fw.tmp_storage}')
-            self.strong_output = '\n'.join(self.strong_output.split('\n')[2:])
-            self.fw.write_in_file(self.tmp_result, self.strong_output)
-        self.strong_check_complete = True
-        return self.strong_output
+        self.command_exec(f'sudo nmap -sn -Pn {self.target} \
+                            -oX {self.fw.tmp_storage}/{self.target}_ping.xml')
 
     def retrieving_geo(self):
         """

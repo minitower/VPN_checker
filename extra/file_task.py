@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-
+import sys
 import pandas as pd
 from dotenv import load_dotenv
 
@@ -35,14 +35,14 @@ class FileWork:
             os.mkdir(self.direction_path / 'Tmp_storage')
             self.tmp_storage = self.direction_path / 'Tmp_storage'
             
-        if os.path.exists(self.direction_path / 'FINAL_RESULTS'):
-            self.final_results = self.direction_path / 'FINAL_RESULTS'
+        if os.path.exists(self.direction_path / 'final'):
+            self.final_results = self.direction_path / 'final'
         else:
-            os.mkdir(self.direction_path / 'FINAL_RESULTS')
-            self.final_results = self.direction_path / 'FINAL_RESULTS'
+            os.mkdir(self.direction_path / 'final')
+            self.final_results = self.direction_path / 'final'
             
-        self.geo_file = self.direction_path / 'FINAL_RESULTS' / 'coordinate.csv'
-        self.final_csv = self.direction_path / 'FINAL_RESULTS' / 'final.csv'
+        self.geo_file = self.direction_path / 'final' / 'coordinate.csv'
+        self.final_csv = self.direction_path / 'final' / 'final.csv'
 
         load_dotenv()
 
@@ -51,6 +51,12 @@ class FileWork:
         os.environ['FINAL_RESULT'] = str(self.final_results)
         os.environ['GEO_FILE'] = str(self.geo_file)
         os.environ['FINAL_CSV'] = str(self.final_csv)
+        
+        #Next needed to add pathes with module to system path
+        sys.path.append(self.direction_path/'tests')
+        sys.path.append(self.direction_path/'vpn_check')
+        sys.path.append(self.direction_path/'extra')
+        sys.path.append(self.direction_path/'SQLFunc')
 
         # Check path to required files
         self.counter = 0

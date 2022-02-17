@@ -1,39 +1,42 @@
-from cProfile import label
-from email import message
-from typing import Protocol, final
-import warnings
+from cgitb import strong
 import xml.etree.ElementTree as ET
 import os
-
 from datetime import datetime
-
-from attr import attrib
-from telegram import Location
 from extra.file_task import FileWork
 from pathlib import Path
 
 
 class XML_parse:
     
-    def __init__(self, target):
+    def __init__(self, target, methods:list=['all']):
         """
         Class for pars XML from nmap_module output.
         Class automatate upload all trees, which available in Tmp_storage
 
         Args:
-
             target (type: str): IP address of host with files in Tmp_storage
+            methods (type: str): methods from nmapModule to use
         """
         self.fw = FileWork()
         self.target = target
         lst_target_files = []
         lst_files = [i for i in os.walk(self.fw.tmp_storage)][-1][-1]
         self.dict_trees = {}
+        self.all_methods = ['ping', 'ports', 'geo', 'traceroute', 'subnet', 'full']
+        lst_filtered = []
+        
+        if 'all' in methods:
+            methods = self.all_methods
+        
+        for i in lst_files:
+            method = i.split('_')[-1].split('.')[0]
+            if method in methods:
+                lst_filtered.append(i)
         
         with open(f'final/{self.target}.txt', 'w') as f: # to be sure: file will be empty
             pass
 
-        for i in lst_files:
+        for i in lst_filtered:
             if i.find(target) != -1:
                 lst_target_files.append(i)
         
@@ -41,8 +44,7 @@ class XML_parse:
             self.dict_trees.update({i.split('_')[-1].split('.')[0]:
                                         ET.parse(self.fw.tmp_storage / Path(i))})
         
-        print('Found next methods' + '\n'.join(self.dict_trees.keys()))
-        self.finalize()
+        #print('Found next methods:\n' + '\n'.join(self.dict_trees.keys()))
 
     def ping_parse(self):
         """
@@ -53,38 +55,73 @@ class XML_parse:
         host = list(root)[2]
         runstats = list(root)[-1]
         
-        self.dict_ping_info = {
-            'start time': root.items()[root.keys().index('start')][-1], 
-            'state': list(host)[0].attrib['state'], 
-            'hostname': list(list(host)[2])[0].attrib['name'], 
-            'srtt': list(host)[3].attrib['srtt'], 
-            'rttvar': list(host)[3].attrib['rttvar'],
-            'end time': list(runstats)[0].attrib['time'],
-            'elapsed': list(runstats)[0].attrib['elapsed']
-        }
-        
-        # For pretty time format
-        time = datetime.utcfromtimestamp(int(self.dict_ping_info  
-                    ['start time'])).strftime("%y-%m-%d %H:%M:%S")
-        self.dict_ping_info.update({'pretty_start_time': time})
-        time = datetime.utcfromtimestamp(int(self.dict_ping_info
-                    ['end time'])).strftime("%y-%m-%d %H:%M:%S")
-        self.dict_ping_info.update({'pretty_end_time': time})
-        
-        self.ping_message = f"""
-        ------------PING REPORT------------
-        START AT: {self.dict_ping_info['pretty_start_time']}
-        HOST STATE: {self.dict_ping_info['state']}
-        HOSTNAME: {self.dict_ping_info['hostname']}
-        SMOOTHED I/O TIME: {self.dict_ping_info['srtt']}
-        VARIANCE OF TRIP: {self.dict_ping_info['rttvar']}
-        END AT: {self.dict_ping_info['pretty_end_time']}
-        ELAPSED: {self.dict_ping_info['elapsed']} s.
-        """
+        if len(list(root)) >=4:
+            self.dict_ping_info = {
+                'start time': root.items()[root.keys().index('start')][-1], 
+                'state': list(host)[0].attrib['state'], 
+                'end time': list(runstats)[0].attrib['time'],
+                'elapsed': list(runstats)[0].attrib['elapsed']
+            }
+            
+            try:
+                self.dict_ping_info.update({'hostname': list(list(host)[2])[0].attrib['name']})
+            except KeyError:
+                self.dict_ping_info.update({'hostname': 'not found'})
+            except IndexError:
+                self.dict_ping_info.update({'hostname': 'not found'})
+            try:
+                self.dict_ping_info.update({'srtt': list(host)[3].attrib['srtt']})
+            except KeyError:
+                self.dict_ping_info.update({'srtt': "can't calculate"})
+            except IndexError:
+                self.dict_ping_info.update({'srtt': "can't calculate"})
+            try:
+                self.dict_ping_info.update({'rttvar': list(host)[3].attrib['rttvar']})
+            except KeyError:
+                self.dict_ping_info.update({'rttvar': "can't calculate"})
+            except IndexError:
+                self.dict_ping_info.update({'rttvar': "can't calculate"})
+            # For pretty time format
+            time = datetime.utcfromtimestamp(int(self.dict_ping_info  
+                        ['start time'])).strftime("%y-%m-%d %H:%M:%S")
+            self.dict_ping_info.update({'pretty_start_time': time})
+            time = datetime.utcfromtimestamp(int(self.dict_ping_info
+                        ['end time'])).strftime("%y-%m-%d %H:%M:%S")
+            self.dict_ping_info.update({'pretty_end_time': time})
 
-        print(self.ping_message)        
-        self.fw.write_in_file(f'final/{self.target}.txt', 
-                                self.ping_message)
+            message = f"""
+            ------------PING REPORT------------
+            START AT: {self.dict_ping_info['pretty_start_time']}
+            HOST STATE: {self.dict_ping_info['state']}
+            HOSTNAME: {self.dict_ping_info['hostname']}
+            SMOOTHED I/O TIME: {self.dict_ping_info['srtt']}
+            VARIANCE OF TRIP: {self.dict_ping_info['rttvar']}
+            END AT: {self.dict_ping_info['pretty_end_time']}
+            ELAPSED: {self.dict_ping_info['elapsed']} s.
+            """
+            print(message)
+            self.fw.write_in_file(f'final/{self.target}.txt', 
+                                    message)
+        
+        elif len(list(root)) == 3:
+            self.dict_ping_info = {
+                'state': 'down',
+                'start time': list(list(root)[2])[0].attrib['time'],
+                'elapsed': list(list(root)[2])[0].attrib['elapsed']
+            }
+            time = datetime.utcfromtimestamp(int(self.dict_ping_info  
+                        ['start time'])).strftime("%y-%m-%d %H:%M:%S")
+            self.dict_ping_info.update({'pretty_start_time': time})
+            
+            message = f"""
+            ------------PING REPORT------------
+            START AT: {self.dict_ping_info['pretty_start_time']}
+            STATE: {self.dict_ping_info['state']}
+            ELAPSED: {self.dict_ping_info['elapsed']}
+            """
+            print(message)
+            self.fw.write_in_file(f'final/{self.target}.txt',
+                                  message=message)
         return self.dict_ping_info
 
     def  subnet_parse(self):
@@ -194,8 +231,7 @@ class XML_parse:
         self.fw.write_in_file(f'final/{self.target}.txt', 
                               message=message)
         return self.dict_traceroute
-        
-            
+                    
     def port_parse(self):
         """
         Func for parse result of nmapModule port scan
@@ -344,41 +380,38 @@ class XML_parse:
         self.fw.write_in_file(f'final/{self.target}.txt', message=message)
         return self.dict_full
 
-    def finalize(self, save=True):
+    def finalize(self, label=True):
         """
         Main function of XML_parse class. Provide needed stage of class and 
         finalise XML parsing stage with one union conclusion about host activity.
+        
+        Args:
+            label (type: bool): if True - print script label on start of script
         """
-
-        greating = f'Library for VPN check in ip address\n'\
-                    f'Init func contain host: {self.target}\n\n'
-
-        label = (r'''
-     _   _ __  __          _____   __      _______  _   _    _____ _    _ ______ _____ _  ________ _____  
-    | \ | |  \/  |   /\   |  __ \  \ \    / /  __ \| \ | |  / ____| |  | |  ____/ ____| |/ /  ____|  __ \ 
-    |  \| | \  / |  /  \  | |__) |  \ \  / /| |__) |  \| | | |    | |__| | |__ | |    | ' /| |__  | |__) |
-    | . ` | |\/| | / /\ \ |  ___/    \ \/ / |  ___/| . ` | | |    |  __  |  __|| |    |  < |  __| |  _  / 
-    | |\  | |  | |/ ____ \| |         \  /  | |    | |\  | | |____| |  | | |___| |____| . \| |____| | \ \ 
-    |_| \_|_|  |_/_/    \_\_|          \/   |_|    |_| \_|  \_____|_|  |_|______\_____|_|\_\______|_|  \_\
-                                                                                                       
-                                                                                                       ''')
-
-
-        print(greating, label)
-        self.fw.write_in_file(f'final/{self.target}.txt',
-                                greating)
-        self.fw.write_in_file(f'final/{self.target}.txt',
-                                label)
+        self.parse_result = {}
         for i in self.dict_trees.keys():
             if i == 'ping':
                 ping_result = self.ping_parse()
+                self.parse_result.update({'ping': ping_result})
             if i == 'subnet':
                 subnet_result = self.subnet_parse()
+                self.parse_result.update({'subnet': subnet_result})
             if i == 'geo':
                 geo_result = self.geo_parse()
+                self.parse_result.update({'geo': geo_result})
             if i == 'full':
                 full_result = self.full_parse()
+                self.parse_result.update({'full': full_result})
             if i == 'traceroute':
                 trace_result = self.traceroute_parse()
+                self.parse_result.update({'trace': trace_result})
             if i == 'ports':
                 port_result = self.port_parse()
+                self.parse_result.update({'ports': port_result})
+            if i == 'sping':
+                ping_result = self.ping_parse()
+        if len(self.parse_result) == 1:
+            self.parse_result = self.parse_result\
+                                    [list(self.dict_trees.keys())[0]]
+        return self.parse_result
+        
