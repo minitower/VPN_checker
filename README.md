@@ -14,13 +14,8 @@ This limitation formed due to IPv4 dinamic registration (address lease term is s
 
 ## Getting Started
 
-Download links:
-
-SSH clone URL: ssh://git@git.jetbrains.space/minitower/vpn-checker/VPN_checker.git
-
-HTTPS clone URL: https://git.jetbrains.space/minitower/vpn-checker/VPN_checker.git 
-
-First to all install **nmap** module for your OS in local machine. You can download this application on https://nmap.org/.
+First to all you **must** install **nmap** and **NSE** libabry (most used NSE in script write in Prerequisites paragraph) for your OS on machine with script. You can download this application on official site https://nmap.org/.
+To right configure script you must configure **.etc** file (example you can find on **.etc_example**). This file was build for security reason and perform function of storage for sensitive information.
 
 ## Prerequisites
 
