@@ -19,6 +19,16 @@ Init func contain host: 219.100.37.96
         END AT: 22-02-16 08:45:34
         ELAPSED: 0.55 s.
         
+        ------------PORT REPORT------------
+        STATE: up
+        HOSTNAME: public-vpn-06-16.vpngate.v4.open.ad.jp
+        OPEN PORTS:
+            
+            PORT: tcp/1194 	STATE: filtered 	SERVICE: openvpn
+
+            
+        ELAPSED: 3.41
+        
         ------------SUBNET DISCOVER VIA NMAP MODULE------------
         
             ------------PING REPORT (SUBNET)------------

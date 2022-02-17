@@ -1,6 +1,6 @@
 from cProfile import label
 from email import message
-from typing import final
+from typing import Protocol, final
 import warnings
 import xml.etree.ElementTree as ET
 import os
@@ -200,6 +200,37 @@ class XML_parse:
         """
         Func for parse result of nmapModule port scan
         """
+        tree = self.dict_trees['ports']
+        root = tree.getroot()
+        port_arr = []
+        port_str = ''
+        self.port_dict = {
+            'state': list(list(root)[3])[0].attrib['state'],
+            'hostname': list(list(list(root)[4])[2])[0].attrib['name'],
+            'elapsed': list(list(root)[5])[0].attrib['elapsed']
+        }
+        
+        for i in list(list(list(root)[4])[3])[:]:
+            port_arr.append((i.attrib['protocol'],
+                             i.attrib['portid'], 
+                             list(i)[0].attrib['state'],
+                             list(i)[1].attrib['name']))
+        for i in port_arr:
+            port_str += f'''
+            PORT: {i[0]}/{i[1]} \tSTATE: {i[2]} \tSERVICE: {i[3]}\n
+            '''            
+        
+        message = f'''
+        ------------PORT REPORT------------
+        STATE: {self.port_dict['state']}
+        HOSTNAME: {self.port_dict['hostname']}
+        OPEN PORTS:
+            {port_str}
+        ELAPSED: {self.port_dict['elapsed']}
+        '''
+        print(message)
+        self.fw.write_in_file(f'final/{self.target}.txt', message=message)
+        return self.port_dict
         
     def geo_parse(self):
         """
@@ -349,4 +380,5 @@ class XML_parse:
                 full_result = self.full_parse()
             if i == 'traceroute':
                 trace_result = self.traceroute_parse()
-            
+            if i == 'ports':
+                port_result = self.port_parse()
