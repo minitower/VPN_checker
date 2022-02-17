@@ -115,7 +115,7 @@ class nmapModule:
                 print(f'{self.fw.WARNING} FOUND VPN: {self.target}{self.fw.ENDC}')
                 return self.vpn_found
 
-    def strong_ping(self, ports=None):
+    def ping(self, ports=None):
         """
         Func for check hosts machine (PC or server)
         :param ports: searchable ports
@@ -129,7 +129,7 @@ class nmapModule:
         Retrieving IP geolocation with http://www.geoplugin.com/
         :return: geolocation of target
         """
-        return self.command_exec('sudo nmap --script ip-geolocation-geoplugin ' + self.optimization_str + ' ' + self.target + \
+        return self.command_exec('sudo nmap -Pn --script ip-geolocation-geoplugin ' + self.optimization_str + ' ' + self.target + \
             f' -oX {self.fw.tmp_storage}/{self.target}_geo.xml')
 
     def traceroute_with_geo(self):
@@ -137,7 +137,7 @@ class nmapModule:
         Traceroute information about target IP address
         :return: info path to IP address
         """
-        return self.command_exec(f'sudo nmap --traceroute {self.target} ' + self.optimization_str + \
+        return self.command_exec(f'sudo nmap -Pn --traceroute {self.target} ' + self.optimization_str + \
             f' -oX {self.fw.tmp_storage}/{self.target}_traceroute.xml')
         
     def full_info(self):
@@ -146,14 +146,14 @@ class nmapModule:
         type of services on them, etc.) 
         This gives the most large information, but too slow for regular analysis
         """
-        self.command_exec(f'sudo nmap -A 185.22.206.72 -oX {self.fw.tmp_storage}/{self.target}_full.xml ' + self.optimization_str)
+        self.command_exec(f'sudo nmap -Pn -A 185.22.206.72 -oX {self.fw.tmp_storage}/{self.target}_full.xml ' + self.optimization_str)
     
     def ping(self):
         """
         Fast way to find host state
         Use only for host without firewall
         """
-        self.command_exec(f'sudo nmap -sn {self.target} \
+        self.command_exec(f'sudo nmap -Pn -sn {self.target} \
                             -oX {self.fw.tmp_storage}/{self.target}_ping.xml')
         
     def port_analyse(self):
@@ -163,7 +163,7 @@ class nmapModule:
         false trace of packet etc.
         Func have medium speed, reasonable to use
         """
-        return self.command_exec(f'sudo nmap -p {self.default_ports} {self.target} '+\
+        return self.command_exec(f'sudo nmap -Pn -p {self.default_ports} {self.target} '+\
             f'-oX {self.fw.tmp_storage}/{self.target}_ports.xml ' + self.optimization_str)
     
     def subnet_discover(self):
@@ -174,5 +174,5 @@ class nmapModule:
         self.subnet = self.target.split('.')
         self.subnet [-1] = '0/24'
         self.subnet = '.'.join(self.subnet)
-        self.command_exec(f'sudo nmap {self.subnet} \
+        self.command_exec(f'sudo nmap -Pn {self.subnet} \
                             -oX {self.fw.tmp_storage}/{self.target}_subnet.xml')

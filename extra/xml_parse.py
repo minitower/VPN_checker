@@ -100,8 +100,6 @@ class XML_parse:
             ELAPSED: {self.dict_ping_info['elapsed']} s.
             """
             print(message)
-            self.fw.write_in_file(f'final/{self.target}.txt', 
-                                    message)
         
         elif len(list(root)) == 3:
             self.dict_ping_info = {
@@ -120,8 +118,7 @@ class XML_parse:
             ELAPSED: {self.dict_ping_info['elapsed']}
             """
             print(message)
-            self.fw.write_in_file(f'final/{self.target}.txt',
-                                  message=message)
+        self.dict_ping_info.update({'message': message})
         return self.dict_ping_info
 
     def  subnet_parse(self):
@@ -142,8 +139,6 @@ class XML_parse:
         """
         n=0
         print(subnet_label)
-        self.fw.write_in_file(f'final/{self.target}.txt', 
-                                subnet_label)
         
         for i in list(root):
             if i.tag == 'host':
@@ -174,17 +169,18 @@ class XML_parse:
                 """
                 if n <= limit:
                     print(message)
-                    self.fw.write_in_file(f'final/{self.target}.txt', message=message)
+                    fmessage += message
                 elif n == limit+1:
                     print(f"{self.fw.WARNING}For buffer overflow reason script didn't print more then {limit} ping report in a row. "
                           f"If you didn't agree with this decision you can fix it with .env file in MAX_PING variable{self.fw.ENDC}")
-                    self.fw.write_in_file(f'final/{self.target}.txt', message=message)
+                    fmessage += message
                 elif n == file_limit+1:
                     print(f"{self.fw.WARNING}For create a readable file script didn't write in final file more then {file_limit} ping report in a row. "
                           f"If you didn't agree with this decision you can fix it with .env file in MAX_PING_FILE variable{self.fw.ENDC}")
         end_message = '\t------------END OF SUBNET DISCOVER------------\n\n'
         print(end_message)
-        self.fw.write_in_file(f'final/{self.target}.txt', end_message)
+        self.subnet_host_dict.update({'message': subnet_label + fmessage + end_message})
+        
         return self.subnet_host_dict
                           
     def traceroute_parse(self):
@@ -228,8 +224,7 @@ class XML_parse:
         '''
         
         print(message)
-        self.fw.write_in_file(f'final/{self.target}.txt', 
-                              message=message)
+        self.dict_traceroute.update({'message': message})
         return self.dict_traceroute
                     
     def port_parse(self):
@@ -240,17 +235,22 @@ class XML_parse:
         root = tree.getroot()
         port_arr = []
         port_str = ''
+        lst_port = []
+        lst_state = []
+        lst_service = []    
         self.port_dict = {
             'state': list(list(root)[3])[0].attrib['state'],
-            'hostname': list(list(list(root)[4])[2])[0].attrib['name'],
-            'elapsed': list(list(root)[5])[0].attrib['elapsed']
+            'elapsed': list(list(root)[-1])[0].attrib['elapsed']
         }
-        
-        for i in list(list(list(root)[4])[3])[:]:
-            port_arr.append((i.attrib['protocol'],
+        n=0
+        for i in list(list(list(root)[3])[3])[:]:
+            port_info = (i.attrib['protocol'],
                              i.attrib['portid'], 
                              list(i)[0].attrib['state'],
-                             list(i)[1].attrib['name']))
+                             list(i)[1].attrib['name'])
+            port_arr.append(port_info)
+            self.port_dict.update({f'port_{n}': port_info})
+            n+=1
         for i in port_arr:
             port_str += f'''
             PORT: {i[0]}/{i[1]} \tSTATE: {i[2]} \tSERVICE: {i[3]}\n
@@ -259,13 +259,12 @@ class XML_parse:
         message = f'''
         ------------PORT REPORT------------
         STATE: {self.port_dict['state']}
-        HOSTNAME: {self.port_dict['hostname']}
         OPEN PORTS:
             {port_str}
         ELAPSED: {self.port_dict['elapsed']}
         '''
         print(message)
-        self.fw.write_in_file(f'final/{self.target}.txt', message=message)
+        self.port_dict.update({'message': message})
         return self.port_dict
         
     def geo_parse(self):
@@ -275,16 +274,14 @@ class XML_parse:
         tree = self.dict_trees['geo']
         root = tree.getroot()
         attr_arr = []
-        
         self.geo_dict = {
-            'start time': list(root)[4].attrib['starttime'],
+            'start time': list(root)[3].attrib['starttime'],
             'state': list(list(root)[3])[0].attrib['state'],
-            'hostname': list(list(list(root)[4])[2])[0].attrib['name'],
-            'end time': list(root)[4].attrib['endtime'],
-            'elapsed': list(list(root)[5])[0].attrib['elapsed'],
+            'end time': list(root)[3].attrib['endtime'],
+            'elapsed': list(list(root)[4])[0].attrib['elapsed'],
         }
         
-        for i in list(list(list(list(root)[4])[4])[0]):
+        for i in list(list(list(list(root)[3])[4])[0]):
             self.geo_dict.update({i.attrib['key']: i.text})
             attr_arr.append(i.attrib['key'])
         
@@ -301,7 +298,6 @@ class XML_parse:
         ------------GEO PLUGIN (NSE)------------
         START AT: {self.geo_dict['pretty start time']}
         STATE: {self.geo_dict['state']}
-        HOSTNAME: {self.geo_dict['hostname']}
         LATITUDE: {self.geo_dict['latitude']}
         LONGITUDE: {self.geo_dict['longitude']}
         CITY: {self.geo_dict['city']}
@@ -312,7 +308,7 @@ class XML_parse:
         -------------END GEO PLUGIN-------------
         """
         print(message)
-        self.fw.write_in_file(f'final/{self.target}.txt', message=message)
+        self.geo_dict.update({'message': message})
         return self.geo_dict
              
     def full_parse(self):
@@ -377,7 +373,7 @@ class XML_parse:
         ------------END FULL REPORT------------
         """
         print(message)
-        self.fw.write_in_file(f'final/{self.target}.txt', message=message)
+        self.dict_full.update({'message': message})
         return self.dict_full
 
     def finalize(self, label=True):
@@ -408,8 +404,6 @@ class XML_parse:
             if i == 'ports':
                 port_result = self.port_parse()
                 self.parse_result.update({'ports': port_result})
-            if i == 'sping':
-                ping_result = self.ping_parse()
         if len(self.parse_result) == 1:
             self.parse_result = self.parse_result\
                                     [list(self.dict_trees.keys())[0]]
