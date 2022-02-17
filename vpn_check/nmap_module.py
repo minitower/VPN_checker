@@ -59,7 +59,7 @@ class nmapModule:
                            'SSL',
                            'VPN']
         self.strong_check_complete = False
-        self.cur.execute('select * from vpn_ports;')
+        self.cur.execute('select * from vpn_port;')
         self.default_ports = pd.DataFrame(self.cur.fetchall(), columns=['port', 'protocol', 'common'])
         self.warning_ports = self.default_ports.copy()
         self.default_ports = self.default_ports.drop_duplicates(subset=['port'])

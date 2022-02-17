@@ -88,11 +88,39 @@ class nmapWizard(nmapModule):
         Args:
             xml_result (type: dict): output of XML_parse class
         """
+        message = f"""3) Port research give next answers:\n"""
         for i in xml_result.keys():
             if i.find('port') != -1:
+                n = i.split('_')[-1]
+                state = xml_result[i][0]
                 port_id = xml_result[i][1]
-                self.sql.execute(f'SELECT common for non-vpn FROM vpn_ports WHERE port number == {port_id};')
-                    
+                common = self.sql.execute(f'SELECT common FROM vpn_port where port == {port_id};').fetchall()[0][0]
+                if common.upper == 'FALSE':
+                    common = False
+                else:
+                    common = True
+                service = xml_result[i][2]
+                if state == 'filtered' and common:
+                    self.vpn_prob += 0
+                    red = 'USER' if common else 'VPN'
+                    message += f"""3.{n}) Port {port_id} is not unique for VPN services (this is a {service}) and 
+                    firewall try to block them. Probably, this is a home network"""
+                if state == 'open' and common:
+                    self.vpn_prob += 3
+                    message += f"""3.{n}) Port {port_id} is not unique for VPN services (this is a {service}), but 
+                    this port is open from outside. This state can be signal that the host is a server (but not only VPN).
+                    But, this still can be home network with inattentive owner"""
+                if state == 'filtered' and not common:
+                    self.vpn_prob += 7
+                    message += f"""3.{n}) Port {port_id} is common for VPN services (this is a {service}), but 
+                    this port filtered by firewall. This state of port almost always talk about VPN service"""
+                if state == 'open' and not common:
+                    self.vpn_prob += 10
+                    message += f"""3.{n}) Port {port_id} is common for VPN services (this is a {service}) and port open to
+                    Internet connection. That state tells about free VPN services with no system administrative (very creepy for
+                    users). But, this, of course, can be interpreted as VPN evidence"""    
+        return message                
+                           
     def start(self):
         """
         Main func - run and coordinate process of nmapModule
@@ -144,6 +172,15 @@ class nmapWizard(nmapModule):
         self.port_analyse()
         port_request = XML_parse(self.target, methods=['ports'])
         port_response = port_request.finalize()
+        self.conclusion = self.port_result_analyse(port_response)
+        if self.vpn_prob >= 10:
+            print(f'{self.fw.WARNING}HOST, PROBABLY, VPN{self.fw.ENDC}')
+            return 'VPN'
+        elif self.vpn_prob >= 5 and self.vpn_prob < 10:
+            print (f'{self.fw.WARNING}NOT SURE, KEEP RESEARCH{self.fw.ENDC}')
+        elif self.vpn_prob < 5:
+            print (f'{self.fw.WARNING}HOST, PROBABLY, NOT VPN{self.fw.ENDC}')
+            return 'USER'
         
         
 
@@ -154,4 +191,3 @@ class nmapWizard(nmapModule):
 wiz = nmapWizard('57.254.58.92')
 wiz.start()
 
-#nmap.sql.execute('SELECT common FROM vpn ports WHERE ports == 1194;')
