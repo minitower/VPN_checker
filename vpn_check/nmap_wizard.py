@@ -162,7 +162,8 @@ class nmapWizard(nmapModule):
         self.retrieving_geo()
         geo_request = XML_parse(self.target, methods=['geo'])
         geo_response = geo_request.finalize()
-        if geo_response['country'] != 'Russia':
+        if geo_response['country'] not in ['Russia', 'Kazakhstan', 'Ukraine', 'Belarus',
+                                           ]:
             print(f'{self.fw.WARNING}HOST LOCATE DID NOT COMPARE WITH '+ \
                         f'EXPECTED LOCATION{self.fw.ENDC}')
             self.vpn_prob += 5

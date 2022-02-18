@@ -18,7 +18,7 @@ def main():
    #target_df = load_target_ip(date=r'2022-01-01')
    #target_df = target_df.loc[target_df['IP'].str.len() <= 16] # temporalty work for IPv4 only
     df = pd.read_csv('./Data_storage/IP_2022.01.01-2022.02.14.csv')
-    target = df['IP'].iloc[random.randint(1, 100)]
+    target = df['IP'].iloc[1:100]
     
     wiz = nmapWizard(target=target)
     wiz.start()
