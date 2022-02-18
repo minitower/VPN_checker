@@ -1,17 +1,15 @@
 import sys
-from urllib import response
-
-from numpy import true_divide
 sys.path.append('/home/minitower/projects/VPN_checker')
 from vpn_check.nmap_module import nmapModule
 from extra.file_task import FileWork
 from extra.xml_parse import XML_parse
 import os
+import sqlite3
 
 
 class nmapWizard(nmapModule):
 
-    def __init__(self, target=None, strength=None, auto=False, print = True, expected_location=None):
+    def __init__(self, target=None, strength=None, auto=True, print = True, expected_location=None):
         """
         Addictive module for nmap module to automatate script and 
         analyse result of report. Can make some decision to host accuracy and 
@@ -35,6 +33,8 @@ class nmapWizard(nmapModule):
             self.expected_location = os.environ.get('LOCATION')
         if self.expected_location is None:
             self.expected_location = 'Russia'
+        if auto:
+            self.start()
             
         
     def greating_screen(self):
@@ -94,7 +94,8 @@ class nmapWizard(nmapModule):
                 n = i.split('_')[-1]
                 state = xml_result[i][0]
                 port_id = xml_result[i][1]
-                common = self.sql.execute(f'SELECT common FROM vpn_port where port == {port_id};').fetchall()[0][0]
+                sql = sqlite3.connect('/home/minitower/projects/VPN_checker/Data_storage/vpn.db')
+                common = sql.execute(f'SELECT common FROM vpn_port where port == {port_id};').fetchall()[0][0]
                 if common.upper == 'FALSE':
                     common = False
                 else:
@@ -125,43 +126,65 @@ class nmapWizard(nmapModule):
         """
         Main func - run and coordinate process of nmapModule
         """
-        #     self.conclusion += '1) Host seams to be down. So, this host can be unreachable VPN server, but most probably' + \
-       #         'this is individual machine (and now this machine is off)'
-       #     return 'USER'
+        # Firstly, ping host to get information about state
+        self.ping()
+        ping_request = XML_parse(self.target, methods=['ping'])
+        ping_response = ping_request.finalize()
+        self.conclusion = f'''
+        VPN_checker automate scan. Subclass of nmapModule on Nmap VPN checker
         
-       # if ping_response['hostname'] != 'not found':
-       #     print(f'{self.fw.WARNING}HOST HAVE HOSTNAME IN OPEN DNS. '+ \
-       #                 F'BUT MAYBE THIS FOR PRIVATE LOCAL NET.{self.fw.ENDC}')
-       # 
-        #    hostname_check = self.hostname_analyse(ping_response['hostname'])
-        #    if hostname_check == 'VPN':
-        #        return 'VPN'
+        SETTINGS: 
+            TARGET IP: {self.target}
+            STRENGTH OF SCAN: {self.strength}
+            AUTO-MOD: ON
         
-       #  If host up - try to get geolocation of host.
-       # self.retrieving_geo()
-       # geo_request = XML_parse(self.target, methods=['geo'])
-       # geo_response = geo_request.finalize()
-       # if geo_response['country'] not in ['Russia', 'Kazakhstan', 'Ukraine', 'Belarus',
-       #                                    ]:
-       #     print(f'{self.fw.WARNING}HOST LOCATE DID NOT COMPARE WITH '+ \
-       #                 f'EXPECTED LOCATION{self.fw.ENDC}')
-       #     self.vpn_prob += 5
-       # else:
-       #     print(f'{self.fw.WARNING}HOST HAVE RUSSIAN IP ADDRESS{self.fw.ENDC}')
+        CONCLUSION:
         
-        #self.port_analyse()
-        #port_request = XML_parse(self.target, methods=['ports'])
-        #port_response = port_request.finalize()
-        #self.conclusion = self.port_result_analyse(port_response)
-        #if self.vpn_prob >= 10:
-        #    print(f'{self.fw.WARNING}HOST, PROBABLY, VPN{self.fw.ENDC}')
-        #    return 'VPN'
-        #elif self.vpn_prob >= 5 and self.vpn_prob < 10:
-        #    print (f'{self.fw.WARNING}NOT SURE, KEEP RESEARCH{self.fw.ENDC}')
-        #elif self.vpn_prob < 5:
-        #    print (f'{self.fw.WARNING}HOST, PROBABLY, NOT VPN{self.fw.ENDC}')
-        #    return 'USER'
-        self.subnet_discover()
-        subnet_request = XML_parse(self.target, methods=['subnet'])
+            '''
+        if ping_response['state'] == 'up':
+            print(f'{self.fw.WARNING}HOST UP, CONTINUE{self.fw.ENDC}')
+            geo_scan = True
+            self.conclusion += '1) Host is up on link and ping has reach target. So, continue'
+        else:
+            print(f'{self.fw.WARNING}HOST DOWN, STOP{self.fw.ENDC}')
+            self.conclusion += '1) Host seams to be down. So, this host can be unreachable VPN server, but most probably' + \
+                'this is individual machine (and now this machine is off)'
+            return 'USER'
+        
+        if ping_response['hostname'] != 'not found':
+            print(f'{self.fw.WARNING}HOST HAVE HOSTNAME IN OPEN DNS. '+ \
+                        F'BUT MAYBE THIS FOR PRIVATE LOCAL NET.{self.fw.ENDC}')
+            self.vpn_prob
+        
+            hostname_check = self.hostname_analyse(ping_response['hostname'])
+            if hostname_check == 'VPN':
+                return 'VPN'
+        
+        # If host up - try to get geolocation of host.
+        self.retrieving_geo()
+        geo_request = XML_parse(self.target, methods=['geo'])
+        geo_response = geo_request.finalize()
+        if geo_response['country'] not in ['Russia', 'Kazakhstan', 'Ukraine', 'Belarus',
+                                           ]:
+            print(f'{self.fw.WARNING}HOST LOCATE DID NOT COMPARE WITH '+ \
+                        f'EXPECTED LOCATION{self.fw.ENDC}')
+            self.vpn_prob += 5
+        else:
+            print(f'{self.fw.WARNING}HOST HAVE RUSSIAN IP ADDRESS{self.fw.ENDC}')
+        
+        self.port_analyse()
+        port_request = XML_parse(self.target, methods=['ports'])
+        port_response = port_request.finalize()
+        self.conclusion = self.port_result_analyse(port_response)
+        if self.vpn_prob >= 10:
+            print(f'{self.fw.WARNING}HOST, PROBABLY, VPN{self.fw.ENDC}')
+            return 'VPN'
+        elif self.vpn_prob >= 5 and self.vpn_prob < 10:
+            print (f'{self.fw.WARNING}NOT SURE, KEEP RESEARCH{self.fw.ENDC}')
+        elif self.vpn_prob < 5:
+            print (f'{self.fw.WARNING}HOST, PROBABLY, NOT VPN{self.fw.ENDC}')
+            return 'USER'
+        self.fw.write_in_file(f'final/conclusion_{self.target}.txt', message=self.conclusion)
         
         
+
