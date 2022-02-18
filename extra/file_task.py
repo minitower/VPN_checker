@@ -215,3 +215,18 @@ class FileWork:
                 log = input('Login:')
                 exec('su - {}'.format(log))
                 exec('chmod {} {}'.format(mode, path))
+                
+    def trash_collector(self, target):
+        """
+        Func for delete unnecessary tmp files from disk to erase free space
+        """
+        lst_all_files = [i for i in os.walk(self.tmp_storage)][0][-1]
+        lst_to_del = []
+        print(lst_all_files)
+        for i in lst_all_files:
+            if i.find(target) != -1:
+                lst_to_del.append(i)
+        if len(lst_to_del) == 0:
+            print(f'{self.WARNING}No files found with selected target{self.ENDC}')
+        for i in lst_to_del:
+            os.remove(self.tmp_storage / Path(i))
