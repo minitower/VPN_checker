@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 class ClickHouse:
 
-    def init(self, host=None, username=None, password=None, env=True):
+    def init(self, host=None, username=None, password=None):
         """
         Init of ClickHouse driver
         :param host: ipv4 address, where DB dislocated
@@ -27,7 +27,6 @@ class ClickHouse:
         class
         :return: None
         """
-        load_dotenv()
         if self.host is None:
             self.host = os.environ.get('HOST')
         if self.username is None:

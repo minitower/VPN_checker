@@ -1,5 +1,5 @@
 import pandas as pd 
-from SQLFunc.clickhouse import ClickHouse
+from clickhouse import ClickHouse
 from extra.file_task import FileWork
 
 def load_target_ip(limit=None, df_return=True, date=None):
@@ -14,7 +14,7 @@ def load_target_ip(limit=None, df_return=True, date=None):
     :return: pd.DataFrame with IP addresses or SQL response
     """
     fw = FileWork()
-    ch_sql = ClickHouse(env_login=True)
+    ch_sql = ClickHouse()
     if not date is None and limit is None:
         sql_response = ch_sql.execute(f"""SELECT click_id, ip 
                                             FROM online.click_data cd 

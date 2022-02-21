@@ -193,9 +193,16 @@ class XML_parse:
         trace_str = ''
         self.dict_traceroute = {
             'state': list(list(root)[3])[0].attrib['state'],
-            'hostname': list(list(list(root)[4])[2])[0].attrib['name'], 
-            'elapsed': list(list(root)[5])[0].attrib['elapsed']
+            'elapsed': list(list(root)[4])[0].attrib['elapsed']
         }
+
+        try:
+            self.dict_traceroute.update({'hostname': list(list(list(root)[3])[2])
+                                        [0].attrib['name']})
+        except ValueError:
+            self.dict_traceroute.update({'hostname': 'not found'})
+        except KeyError:
+            self.dict_traceroute.update({'hostname': 'not found'})
         
         for i in list(list(list(root)[4])[4])[:]:
             if 'host' in i.keys() :
@@ -379,7 +386,7 @@ class XML_parse:
     def finalize(self, label=True):
         """
         Main function of XML_parse class. Provide needed stage of class and 
-        finalise XML parsing stage with one union conclusion about host activity.
+        finalize XML parsing stage with one union conclusion about host activity.
         
         Args:
             label (type: bool): if True - print script label on start of script

@@ -1,3 +1,4 @@
+from inspect import trace
 import sys
 sys.path.append('/home/minitower/projects/VPN_checker')
 from vpn_check.nmap_module import nmapModule
@@ -34,7 +35,8 @@ class nmapWizard(nmapModule):
         if self.expected_location is None:
             self.expected_location = 'Russia'
         if auto:
-            self.start()
+            result = self.start()
+
             
         
     def greating_screen(self):
@@ -73,12 +75,14 @@ class nmapWizard(nmapModule):
                     ask = input('You think, i am right? (Y/n)> ')
                     if ask.lower() in ['y', '', 'yes']:
                         print(f'{self.fw.WARNING}VPN FOUND: {self.target}{self.fw.ENDC}')
+                        self.fw.write_in_file('./result.txt', f'{self.target}, vpn\n')
                         return 'VPN'
                     else:
                         print(f'{self.fw.WARNING}KEEP RESEARCHING{self.fw.ENDC}')
                         return 'USER'
                 else:
                     print(f'{self.fw.WARNING}VPN FOUND: {self.target}{self.fw.ENDC}')
+                    self.fw.write_in_file('./result.txt', f'{self.target}, vpn\n')
                     return 'VPN'
                 
     def port_result_analyse(self, xml_result):
@@ -149,6 +153,7 @@ class nmapWizard(nmapModule):
             print(f'{self.fw.WARNING}HOST DOWN, STOP{self.fw.ENDC}')
             self.conclusion += '1) Host seams to be down. So, this host can be unreachable VPN server, but most probably' + \
                 'this is individual machine (and now this machine is off)'
+            self.fw.write_in_file('./result.txt', f'{self.target}, non-vpn\n')
             return 'USER'
         
         if ping_response['hostname'] != 'not found':
@@ -158,14 +163,14 @@ class nmapWizard(nmapModule):
         
             hostname_check = self.hostname_analyse(ping_response['hostname'])
             if hostname_check == 'VPN':
+                self.fw.write_in_file('./result.txt', f'{self.target}, vpn\n')
                 return 'VPN'
         
         # If host up - try to get geolocation of host.
         self.retrieving_geo()
         geo_request = XML_parse(self.target, methods=['geo'])
         geo_response = geo_request.finalize()
-        if geo_response['country'] not in ['Russia', 'Kazakhstan', 'Ukraine', 'Belarus',
-                                           ]:
+        if geo_response['country'] not in ['Russia', 'Kazakhstan', 'Ukraine', 'Belarus', 'Armenia']:
             print(f'{self.fw.WARNING}HOST LOCATE DID NOT COMPARE WITH '+ \
                         f'EXPECTED LOCATION{self.fw.ENDC}')
             self.vpn_prob += 5
@@ -175,16 +180,27 @@ class nmapWizard(nmapModule):
         self.port_analyse()
         port_request = XML_parse(self.target, methods=['ports'])
         port_response = port_request.finalize()
-        self.conclusion = self.port_result_analyse(port_response)
+        self.conclusion += self.port_result_analyse(port_response)
         if self.vpn_prob >= 10:
             print(f'{self.fw.WARNING}HOST, PROBABLY, VPN{self.fw.ENDC}')
+            self.fw.write_in_file('./result.txt', f'{self.target}, vpn\n')
             return 'VPN'
         elif self.vpn_prob >= 5 and self.vpn_prob < 10:
             print (f'{self.fw.WARNING}NOT SURE, KEEP RESEARCH{self.fw.ENDC}')
+            self.stage2()
+            self.fw.write_in_file('./result.txt', f'{self.target}, vpn\n')
+            return 'VPN'
         elif self.vpn_prob < 5:
             print (f'{self.fw.WARNING}HOST, PROBABLY, NOT VPN{self.fw.ENDC}')
+            self.fw.write_in_file('./result.txt', f'{self.target}, non-vpn\n')
             return 'USER'
-        self.fw.write_in_file(f'final/conclusion_{self.target}.txt', message=self.conclusion)
+        
+    def stage2(self):
+        """
+        Func for result if nmap wizard not sure in result of VPN check analysis
+        Provide a combination methods for analyse subnet of host
+        (like "subnet" or traceroute)
+        """
+        self.traceroute_with_geo()
         
         
-
