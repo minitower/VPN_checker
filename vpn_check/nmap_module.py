@@ -137,7 +137,7 @@ class nmapModule:
         Traceroute information about target IP address
         :return: info path to IP address
         """
-        return self.command_exec(f'sudo nmap -Pn --traceroute {self.target} ' + self.optimization_str + \
+        self.command_exec(f'sudo nmap -Pn --traceroute {self.target} ' + self.optimization_str + \
             f' -oX {self.fw.tmp_storage}/{self.target}_traceroute.xml')
         
     def full_info(self):
