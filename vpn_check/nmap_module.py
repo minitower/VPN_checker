@@ -158,7 +158,7 @@ class nmapModule:
         
     def port_analyse(self):
         """
-        Func for ICMP (or TCP connect) to port in host computer.
+        Func for UDP (or TCP connect) to port in host computer.
         This func are very useful for host without location, unknown state, 
         false trace of packet etc.
         Func have medium speed, reasonable to use
