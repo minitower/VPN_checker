@@ -45,23 +45,6 @@ class nmapWizard(nmapModule):
         """
         greating = f'Library for VPN check in ip address\n'\
                     f'Init func contain host: {self.target}\n\n'
-
-        label = (r'''
-     _   _ __  __          _____   __      _______  _   _    _____ _    _ ______ _____ _  ________ _____  
-    | \ | |  \/  |   /\   |  __ \  \ \    / /  __ \| \ | |  / ____| |  | |  ____/ ____| |/ /  ____|  __ \ 
-    |  \| | \  / |  /  \  | |__) |  \ \  / /| |__) |  \| | | |    | |__| | |__ | |    | ' /| |__  | |__) |
-    | . ` | |\/| | / /\ \ |  ___/    \ \/ / |  ___/| . ` | | |    |  __  |  __|| |    |  < |  __| |  _  / 
-    | |\  | |  | |/ ____ \| |         \  /  | |    | |\  | | |____| |  | | |___| |____| . \| |____| | \ \ 
-    |_| \_|_|  |_/_/    \_\_|          \/   |_|    |_| \_|  \_____|_|  |_|______\_____|_|\_\______|_|  \_\
-                                                                                                       
-                                                                                                       ''')
-
-
-        print(greating, label)
-        self.fw.write_in_file(f'final/{self.target}.txt',
-                                greating)
-        self.fw.write_in_file(f'final/{self.target}.txt',
-                                label)
         
     def hostname_analyse(self, name):
         """
@@ -169,7 +152,7 @@ class nmapWizard(nmapModule):
         # If host up - try to get geolocation of host.
         self.retrieving_geo()
         geo_request = XML_parse(self.target, methods=['geo'])
-        geo_response = geo_request.finalize()
+        geo_response, geo_message = geo_request.finalize()
         if geo_response['country'] not in ['Russia', 'Kazakhstan', 'Ukraine', 'Belarus', 'Armenia']:
             print(f'{self.fw.WARNING}HOST LOCATE DID NOT COMPARE WITH '+ \
                         f'EXPECTED LOCATION{self.fw.ENDC}')
@@ -179,7 +162,7 @@ class nmapWizard(nmapModule):
         
         self.port_analyse()
         port_request = XML_parse(self.target, methods=['ports'])
-        port_response = port_request.finalize()
+        port_response, port_message = port_request.finalize()
         self.conclusion += self.port_result_analyse(port_response)
         if self.vpn_prob >= 10:
             print(f'{self.fw.WARNING}HOST, PROBABLY, VPN{self.fw.ENDC}')
@@ -187,20 +170,13 @@ class nmapWizard(nmapModule):
             return 'VPN'
         elif self.vpn_prob >= 5 and self.vpn_prob < 10:
             print (f'{self.fw.WARNING}NOT SURE, KEEP RESEARCH{self.fw.ENDC}')
-            self.stage2()
+            self.fw.write_in_file(f'./final/{self.target}', geo_message)
+            self.fw.write_in_file(f'./final/{self.target}', port_message)
             self.fw.write_in_file('./result.txt', f'{self.target}, vpn\n')
             return 'VPN'
         elif self.vpn_prob < 5:
             print (f'{self.fw.WARNING}HOST, PROBABLY, NOT VPN{self.fw.ENDC}')
             self.fw.write_in_file('./result.txt', f'{self.target}, non-vpn\n')
             return 'USER'
-        
-    def stage2(self):
-        """
-        Func for result if nmap wizard not sure in result of VPN check analysis
-        Provide a combination methods for analyse subnet of host
-        (like "subnet" or traceroute)
-        """
-        self.traceroute_with_geo()
         
         

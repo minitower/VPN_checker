@@ -1,13 +1,9 @@
 import pandas as pd
-from SQLFunc.clickhouse import ClickHouse
 from extra.file_task import FileWork
 from vpn_check.nmap_wizard import nmapWizard
-import random
-from multiprocessing import Pool
 from dotenv import load_dotenv
 
 p_num = 5 # num of process
-
 fw = FileWork()    
 
 if __name__ == '__main__':
@@ -19,11 +15,5 @@ if __name__ == '__main__':
     df = pd.read_csv('./IP_Table.csv')
     target_df = df['ip'].values
     for i in target_df:
-        try:
-            wiz = nmapWizard(target=i)
-            if wiz.result == 'VPN':
-                df.loc[df['ip'] == i, 'conclusion']
-            fw.trash_collector(i)
-
-        except:
-            continue    
+        nmapWizard(target=i)
+        fw.trash_collector(i)

@@ -218,6 +218,7 @@ class XML_parse:
             
             
             hop_key_arr.append('hop_'+i.attrib['ttl'])
+        return '\n'.join(hop_key_arr)
         
         for i in hop_key_arr:
             trace_str += self.dict_traceroute[i]
@@ -232,7 +233,7 @@ class XML_parse:
         
         print(message)
         self.dict_traceroute.update({'message': message})
-        return self.dict_traceroute
+        return self.dict_traceroute, message
                     
     def port_parse(self):
         """
@@ -272,7 +273,7 @@ class XML_parse:
         '''
         print(message)
         self.port_dict.update({'message': message})
-        return self.port_dict
+        return self.port_dict, message
         
     def geo_parse(self):
         """
@@ -316,7 +317,7 @@ class XML_parse:
         """
         print(message)
         self.geo_dict.update({'message': message})
-        return self.geo_dict
+        return self.geo_dict, message
              
     def full_parse(self):
         """
